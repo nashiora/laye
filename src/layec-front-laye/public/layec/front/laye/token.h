@@ -1,6 +1,8 @@
 #ifndef LAYEC_FRONT_LAYE_TOKEN_H
 #define LAYEC_FRONT_LAYE_TOKEN_H
 
+#include "kos/kos.h"
+
 #define LAYE_TOKEN_KINDS \
     T(IDENTIFIER)
 

@@ -1,0 +1,5 @@
+#include "kos/allocator.h"
+#include "kos/builtins.h"
+#include "kos/primitives.h"
+#include "kos/stb_ds.h"
+#include "kos/string.h"
