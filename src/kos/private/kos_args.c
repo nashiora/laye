@@ -57,7 +57,7 @@ void kos_args_parse(kos_args_parser* parser, int argc, char** argv, void* input)
                     longName.count = longOptionEqIndex;
                 }
 
-                for (kos_arg_option* option = &parser->options[0]; option->name != nullptr; option++)
+                for (kos_arg_option* option = &parser->options[0]; option->name != nullptr || option->key != 0; option++)
                 {
                     if (kos_string_view_equals_constant(longName, option->name))
                     {
@@ -98,7 +98,7 @@ void kos_args_parse(kos_args_parser* parser, int argc, char** argv, void* input)
             }
 
             int shortKey = cast(int) arg[1];
-            for (kos_arg_option* option = &parser->options[0]; option->name != nullptr; option++)
+            for (kos_arg_option* option = &parser->options[0]; option->name != nullptr || option->key != 0; option++)
             {
                 if (shortKey == option->key)
                 {
