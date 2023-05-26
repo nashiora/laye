@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "kos/builtins.h"
 #include "kos/primitives.h"
 #include "kos/string.h"
@@ -24,4 +26,71 @@ kos_string kos_string_create(kos_allocator_function allocator, const uchar* memo
 kos_string kos_string_deallocate(kos_string s)
 {
     kos_deallocate(s.allocator, cast(void*) s.memory);
+}
+
+isize kos_string_index_of_uchar(kos_string s, uchar uc)
+{
+    for (isize i = 0; i < s.count; i++)
+    {
+        if (s.memory[i] == uc)
+            return i;
+    }
+
+    return -1;
+}
+
+kos_string_view kos_string_slice(string s, usize offset, usize count)
+{
+    if (offset > s.count)
+        offset = s.count;
+    
+    if (count > s.count - offset)
+        count = s.count - offset;
+    
+    return (kos_string_view){
+        .memory = s.memory + offset,
+        .count = count,
+    };
+}
+
+kos_string_view kos_string_view_slice(string_view sv, usize offset, usize count)
+{
+    if (offset > sv.count)
+        offset = sv.count;
+    
+    if (count > sv.count - offset)
+        count = sv.count - offset;
+    
+    return (kos_string_view){
+        .memory = sv.memory + offset,
+        .count = count,
+    };
+}
+
+isize kos_string_view_index_of_uchar(kos_string_view sv, uchar uc)
+{
+    for (isize i = 0; i < sv.count; i++)
+    {
+        if (sv.memory[i] == uc)
+            return i;
+    }
+
+    return -1;
+}
+
+bool kos_string_view_equals(kos_string_view sv, kos_string_view other)
+{
+    if (sv.count != other.count)
+        return false;
+    
+    return 0 == memcmp(sv.memory, other.memory, sv.count);
+}
+
+bool kos_string_view_equals_constant(kos_string_view sv, const char* constant)
+{
+    usize constantLength = cast(usize) strlen(constant);
+    if (sv.count != constantLength)
+        return false;
+    
+    return 0 == memcmp(sv.memory, constant, constantLength);
 }

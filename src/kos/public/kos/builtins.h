@@ -4,6 +4,10 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+#ifndef KOS_NO_SHORT_NAMES
+#  define raise_fatal_error kos_raise_fatal_error
+#endif // KOS_NO_SHORT_NAMES
+
 #ifndef _MSC_VER
 #  define NORETURN __attribute__((noreturn))
 #  define PRETTY_FUNCTION __PRETTY_FUNCTION__
@@ -51,6 +55,18 @@
 
 #ifndef unreachable
 #define unreachable KOS_INTERNAL_PROGRAM_ERROR("unreachable")
+#endif
+
+#ifndef list
+#define list(T) T*
+#endif
+
+#ifndef hashmap
+#define hashmap(K, V) struct { K key; V value; }
+#endif
+
+#ifndef strmap
+#define strmap(V) hashmap(char*, V)
 #endif
 
 noreturn void kos_raise_fatal_error(

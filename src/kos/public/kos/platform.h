@@ -4,6 +4,12 @@
 #include "kos/primitives.h"
 #include "kos/string.h"
 
+#ifndef KOS_NO_SHORT_NAMES
+#  define PLATFORM_PATH_SEPARATOR KOS_PLATFORM_PATH_SEPARATOR
+#  define platform_read_file_status kos_platform_read_file_status
+#  define platform_read_file kos_platform_read_file
+#endif // KOS_NO_SHORT_NAMES
+
 #ifndef _WIN32
 #define KOS_PLATFORM_PATH_SEPARATOR "/"
 #else

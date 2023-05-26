@@ -26,6 +26,7 @@ project(layec
 
 add_executable(layec
     "src/kos/private/kos_allocator.c"
+    "src/kos/private/kos_args.c"
     "src/kos/private/kos_builtins.c"
     "src/kos/private/kos_platform.c"
     "src/kos/private/kos_stb_ds.c"
