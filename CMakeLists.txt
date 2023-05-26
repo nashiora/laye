@@ -33,6 +33,8 @@ add_executable(layec
     "src/kos/private/kos_string.c"
 
     "src/layec/private/main.c"
+
+    "src/layec-lib/private/compiler.c"
 )
 
 set_property(TARGET layec PROPERTY C_STANDARD 99)

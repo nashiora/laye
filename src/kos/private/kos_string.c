@@ -28,6 +28,22 @@ kos_string kos_string_deallocate(kos_string s)
     kos_deallocate(s.allocator, cast(void*) s.memory);
 }
 
+const char* kos_string_to_cstring(kos_string s, kos_allocator_function allocator)
+{
+    if (allocator == nullptr)
+        allocator = s.allocator;
+    if (allocator == nullptr)
+        allocator = kos_default_allocator;
+
+    assert(allocator);
+
+    char* result = allocate(allocator, s.count + 1);
+    result[s.count] = 0;
+    memcpy(result, s.memory, s.count);
+
+    return result;
+}
+
 isize kos_string_index_of_uchar(kos_string s, uchar uc)
 {
     for (isize i = 0; i < s.count; i++)
@@ -65,6 +81,20 @@ kos_string_view kos_string_view_slice(string_view sv, usize offset, usize count)
         .memory = sv.memory + offset,
         .count = count,
     };
+}
+
+const char* kos_string_view_to_cstring(kos_string_view sv, kos_allocator_function allocator)
+{
+    if (allocator == nullptr)
+        allocator = kos_default_allocator;
+
+    assert(allocator);
+
+    char* result = allocate(allocator, sv.count + 1);
+    result[sv.count] = 0;
+    memcpy(result, sv.memory, sv.count);
+
+    return result;
 }
 
 isize kos_string_view_index_of_uchar(kos_string_view sv, uchar uc)

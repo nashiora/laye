@@ -18,6 +18,12 @@
 #  define BUILTIN_UNREACHABLE() __assume(0)
 #endif
 
+#ifdef __EXT_FORMAT__
+#  define EXT_FORMAT(fmt, arg) __attribute__((ext_format(fmt, arg)))
+#else
+#  define EXT_FORMAT(fmt, arg)
+#endif
+
 #if __STDC_VERSION__ >= 201112L
 #define static_assert(...) _Static_assert(__VA_ARGS__)
 #else

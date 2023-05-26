@@ -34,5 +34,6 @@ kos_string kos_platform_read_file(const uchar* path, kos_allocator_function allo
 
     fclose(fileHandle);
 
+    if (status) *status = KOS_PLATFORM_READ_FILE_SUCCESS;
     return kos_string_create(allocator, sourceText, fileLength);
 }

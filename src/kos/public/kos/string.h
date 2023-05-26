@@ -24,10 +24,12 @@
 #  define string_allocate(allocator, count) kos_string_allocate(allocator, count)
 #  define string_create(allocator, memory, count) kos_string_create(allocator, memory, count)
 #  define string_deallocate(s) kos_string_deallocate(s)
+#  define string_to_cstring(s, allocator) kos_string_to_cstring(s, allocator)
 #  define string_index_of_uchar(s, uc) kos_string_index_of_uchar(s, uc)
 
 #  define string_slice(s, offset, length) kos_string_slice(s, offset, length)
 #  define string_view_slice(sv, offset, length) kos_string_view_slice(sv, offset, length)
+#  define string_view_to_cstring(sv, allocator) kos_string_view_to_cstring(sv, allocator)
 #  define string_view_index_of_uchar(sv, uc) kos_string_view_index_of_uchar(sv, uc)
 #  define string_view_equals(sv, other) kos_string_view_equals(sv, other)
 #  define string_view_equals_constant(sv, constant) kos_string_view_equals_constant(sv, constant)
@@ -54,10 +56,12 @@ typedef struct kos_string_view
 kos_string kos_string_allocate(kos_allocator_function allocator, usize count);
 kos_string kos_string_create(kos_allocator_function allocator, const uchar* memory, usize count);
 kos_string kos_string_deallocate(kos_string s);
+const char* kos_string_to_cstring(kos_string s, kos_allocator_function allocator);
 isize kos_string_index_of_uchar(kos_string s, uchar uc);
 
 kos_string_view kos_string_slice(string s, usize offset, usize count);
 kos_string_view kos_string_view_slice(string_view sv, usize offset, usize count);
+const char* kos_string_view_to_cstring(kos_string_view sv, kos_allocator_function allocator);
 isize kos_string_view_index_of_uchar(kos_string_view sv, uchar uc);
 bool kos_string_view_equals(kos_string_view sv, kos_string_view other);
 bool kos_string_view_equals_constant(kos_string_view sv, const char* constant);

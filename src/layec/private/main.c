@@ -2,6 +2,9 @@
 
 #include "kos/args.h"
 #include "kos/kos.h"
+#include "kos/platform.h"
+
+#include "layec/compiler.h"
 
 typedef struct layec_file_info
 {
@@ -65,11 +68,8 @@ static args_parse_status layec_args_parser(arg_parsed arg, args_state* state)
     return 0;
 }
 
-int main(int argc, char** argv)
+static void debug_print_args(layec_args args)
 {
-    layec_args args = { 0 };
-    args_parse(&parser, argc, argv, &args);
-
     printf("output file name: "STRING_VIEW_FORMAT"\n", STRING_VIEW_EXPAND(args.outputFileName));
     printf("input files:\n");
     for (usize i = 0; i < arrlenu(args.files); i++)
@@ -79,6 +79,29 @@ int main(int argc, char** argv)
         if (fileInfo.language.count != 0)
             printf(" ("STRING_VIEW_FORMAT")", STRING_VIEW_EXPAND(fileInfo.language));
         printf("\n");
+    }
+}
+
+int main(int argc, char** argv)
+{
+    layec_args args = { 0 };
+    args_parse(&parser, argc, argv, &args);
+
+    debug_print_args(args);
+
+    layec_context context = { 0 };
+    for (usize i = 0; i < arrlenu(args.files); i++)
+    {
+        layec_file_info fileInfo = args.files[i];
+        platform_read_file_status readStatus = 0;
+        string fileSource = platform_read_file(string_view_to_cstring(fileInfo.fileName, nullptr), nullptr, &readStatus);
+        layec_fileid fileId = layec_context_add_file(&context, fileInfo.fileName, fileSource);
+
+        if (readStatus != KOS_PLATFORM_READ_FILE_SUCCESS)
+        {
+            layec_location loc = { fileId, 0, 0 };
+            layec_issue_diagnostic(&context, SEV_ERROR, loc, "Failed to read source file `"STRING_VIEW_FORMAT"`.", STRING_VIEW_EXPAND(fileInfo.fileName));
+        }
     }
 
     return 0;
