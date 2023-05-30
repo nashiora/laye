@@ -5,10 +5,6 @@
 
 #include "layec/diagnostic.h"
 
-#ifndef LAYEC_NO_SHORT_NAMES
-#  define context_add_file(name, source) layec_context_add_file(name, source)
-#endif // LAYEC_NO_SHORT_NAMES
-
 typedef struct layec_source_file_info
 {
     string_view name;

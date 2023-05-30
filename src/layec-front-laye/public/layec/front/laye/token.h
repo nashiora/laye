@@ -3,6 +3,9 @@
 
 #include "kos/kos.h"
 
+#include "layec/diagnostic.h"
+#include "layec/compiler.h"
+
 #define LAYE_TOKEN_KINDS \
     T(IDENTIFIER)
 
@@ -16,6 +19,8 @@ LAYE_TOKEN_KINDS
 typedef struct laye_token
 {
     laye_token_kind kind;
+    layec_location location;
+    string_view atom;
 } laye_token;
 
 #endif // LAYEC_FRONT_LAYE_TOKEN_H
