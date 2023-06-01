@@ -113,7 +113,7 @@ bool kos_string_view_equals(kos_string_view sv, kos_string_view other)
     if (sv.count != other.count)
         return false;
     
-    return 0 == memcmp(sv.memory, other.memory, sv.count);
+    return 0 == memcmp(sv.memory, other.memory, other.count);
 }
 
 bool kos_string_view_equals_constant(kos_string_view sv, const char* constant)
@@ -123,4 +123,21 @@ bool kos_string_view_equals_constant(kos_string_view sv, const char* constant)
         return false;
     
     return 0 == memcmp(sv.memory, constant, constantLength);
+}
+
+bool kos_string_view_ends_with(kos_string_view sv, kos_string_view other)
+{
+    if (sv.count < other.count)
+        return false;
+    
+    return 0 == memcmp(sv.memory + (sv.count - other.count), other.memory, other.count);
+}
+
+bool kos_string_view_ends_with_constant(kos_string_view sv, const char* constant)
+{
+    usize constantLength = cast(usize) strlen(constant);
+    if (sv.count < constantLength)
+        return false;
+    
+    return 0 == memcmp(sv.memory + (sv.count - constantLength), constant, constantLength);
 }

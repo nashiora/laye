@@ -35,6 +35,8 @@ add_executable(layec1
   "src/layec1-src/layec1/private/main.c"
 
   "src/layec1-src/layec1-lib/private/compiler.c"
+
+  "src/layec1-src/layec1-front-laye/private/laye_front.c"
 )
 
 set_property(TARGET layec1 PROPERTY C_STANDARD 99)

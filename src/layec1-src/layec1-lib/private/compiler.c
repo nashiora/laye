@@ -19,12 +19,16 @@ layec_fileid layec_context_add_file(layec_context* context, string_view name, st
 string_view layec_context_get_file_name(layec_context* context, layec_fileid fileId)
 {
     assert(fileId <= arrlenu(context->files));
+    if (fileId == 0)
+        return STRING_VIEW_LITERAL("<invalid file>");
     return context->files[fileId - 1].name;
 }
 
 string layec_context_get_file_source(layec_context* context, layec_fileid fileId)
 {
     assert(fileId <= arrlenu(context->files));
+    if (fileId == 0)
+        return STRING_EMPTY;
     return context->files[fileId - 1].source;
 }
 
