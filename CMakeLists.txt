@@ -25,24 +25,24 @@ project(layec
 )
 
 add_executable(layec
-    "src/kos/private/kos_allocator.c"
-    "src/kos/private/kos_args.c"
-    "src/kos/private/kos_builtins.c"
-    "src/kos/private/kos_platform.c"
-    "src/kos/private/kos_stb_ds.c"
-    "src/kos/private/kos_string.c"
+  "src/kos/private/kos_allocator.c"
+  "src/kos/private/kos_args.c"
+  "src/kos/private/kos_builtins.c"
+  "src/kos/private/kos_platform.c"
+  "src/kos/private/kos_stb_ds.c"
+  "src/kos/private/kos_string.c"
 
-    "src/layec/private/main.c"
+  "src/layec/private/main.c"
 
-    "src/layec-lib/private/compiler.c"
+  "src/layec-lib/private/compiler.c"
 )
 
 set_property(TARGET layec PROPERTY C_STANDARD 99)
 target_include_directories(layec PUBLIC
-    "./src/kos/public"
-    "./src/layec/public"
-    "./src/layec-lib/public"
-    "./src/layec-front-laye/public"
+  "./src/kos/public"
+  "./src/layec/public"
+  "./src/layec-lib/public"
+  "./src/layec-front-laye/public"
 )
 
 if (NOT WIN32)
