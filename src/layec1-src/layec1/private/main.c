@@ -100,6 +100,7 @@ static language_front_end_info frontEndInfos[] = {
 
 typedef struct front_end_data
 {
+    const char* name;
     layec_front_end_entry_function entryFunction;
     list(layec_fileid) files;
 } front_end_data;
@@ -157,6 +158,7 @@ int main(int argc, char** argv)
             if (frontEndData == nullptr)
             {
                 frontEndData = calloc(1, sizeof(front_end_data));
+                frontEndData->name = frontEndInfo.name;
                 frontEndData->entryFunction = frontEndInfo.entryFunction;
                 arrput(frontEndsToInvoke, frontEndData);
             }
@@ -166,10 +168,23 @@ int main(int argc, char** argv)
         }
     }
 
+    bool allFrontEndsSuccessfull = true;
     for (usize k = 0; k < arrlenu(frontEndsToInvoke); k++)
     {
         front_end_data* frontEndData = frontEndsToInvoke[k];
-        frontEndData->entryFunction(&context, frontEndData->files);
+        layec_front_end_status status = frontEndData->entryFunction(&context, frontEndData->files);
+
+        if (status != LAYEC_FRONT_SUCCESS)
+        {
+            fprintf(stderr, "Front end `%s` did not complete successfully\n", frontEndData->name);
+            allFrontEndsSuccessfull = false;
+        }
+    }
+
+    if (!allFrontEndsSuccessfull)
+    {
+        fprintf(stderr, "Not all front ends completed successfully, aborting compilation.\n");
+        return 1;
     }
 
     return 0;

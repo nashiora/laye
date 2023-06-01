@@ -39,6 +39,7 @@
 typedef enum layec_front_end_status
 {
     LAYEC_FRONT_SUCCESS = 0,
+    LAYEC_FRONT_NO_INPUT_FILES = 0,
 } layec_front_end_status;
 
 typedef layec_front_end_status (*layec_front_end_entry_function)(layec_context* context, list(layec_fileid) inputFiles);

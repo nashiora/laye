@@ -9,7 +9,7 @@ layec_front_end_status laye_front_end_entry(layec_context* context, list(layec_f
     printf("Hello, Laye front end!\n");
     
     if (arrlenu(inputFiles) == 0)
-        return LAYEC_FRONT_SUCCESS;
+        return LAYEC_FRONT_NO_INPUT_FILES;
 
     for (usize i = 0; i < arrlenu(inputFiles); i++)
     {
