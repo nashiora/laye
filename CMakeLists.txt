@@ -18,13 +18,13 @@ endif()
 
 set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${C_WARNING_FLAGS} -lm")
 
-# ==================== layec Project ====================
-project(layec
+# ==================== layec1 Project ====================
+project(layec1
   VERSION 0.1.0
   LANGUAGES C
 )
 
-add_executable(layec
+add_executable(layec1
   "src/kos/private/kos_allocator.c"
   "src/kos/private/kos_args.c"
   "src/kos/private/kos_builtins.c"
@@ -32,20 +32,20 @@ add_executable(layec
   "src/kos/private/kos_stb_ds.c"
   "src/kos/private/kos_string.c"
 
-  "src/layec/private/main.c"
+  "src/layec1-src/layec1/private/main.c"
 
-  "src/layec-lib/private/compiler.c"
+  "src/layec1-src/layec1-lib/private/compiler.c"
 )
 
-set_property(TARGET layec PROPERTY C_STANDARD 99)
-target_include_directories(layec PUBLIC
+set_property(TARGET layec1 PROPERTY C_STANDARD 99)
+target_include_directories(layec1 PUBLIC
   "./src/kos/public"
-  "./src/layec/public"
-  "./src/layec-lib/public"
-  "./src/layec-front-laye/public"
+  "./src/layec1-src/layec1/public"
+  "./src/layec1-src/layec1-lib/public"
+  "./src/layec1-src/layec1-front-laye/public"
 )
 
 if (NOT WIN32)
-  target_link_libraries(layec PRIVATE m)
+  target_link_libraries(layec1 PRIVATE m)
 endif()
 # ==================== layec Project ====================

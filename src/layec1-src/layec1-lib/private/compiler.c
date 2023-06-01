@@ -86,7 +86,7 @@ void layec_issue_diagnostic(layec_context* context, layec_diagnostic_severity se
 {
     va_list ap;
     va_start(ap, fmt);
-    vissue_diagnostic(context, severity, loc, fmt, ap);
+    layec_vissue_diagnostic(context, severity, loc, fmt, ap);
     va_end(ap);
 }
     
