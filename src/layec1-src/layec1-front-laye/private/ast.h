@@ -118,9 +118,13 @@ struct laye_ast_node
     union
     {
         laye_token* literal;
-        int typeSizeParameter;
 
-        union
+        struct
+        {
+            int primitiveSize;
+        } type;
+
+        struct
         {
             list(laye_ast_modifier) modifiers;
             laye_ast_node* declaredType;
@@ -128,7 +132,7 @@ struct laye_ast_node
             laye_ast_node* initialValue;
         } bindingDeclaration;
 
-        union
+        struct
         {
             list(laye_ast_modifier) modifiers;
             laye_ast_node* returnType;
@@ -137,14 +141,14 @@ struct laye_ast_node
             laye_ast_node* body;
         } functionDeclaration;
 
-        union
+        struct
         {
             list(laye_ast_modifier) modifiers;
             laye_token* nameToken;
             list(laye_ast_node*) fieldBindings;
         } structDeclaration;
 
-        union
+        struct
         {
             list(laye_ast_modifier) modifiers;
             laye_token* nameToken;

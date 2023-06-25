@@ -308,7 +308,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_IX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_INT_SIZED, current->location);
-            sizedIntType->typeSizeParameter = current->sizeParameter;
+            sizedIntType->type.primitiveSize = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
@@ -317,7 +317,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_UX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_UINT_SIZED, current->location);
-            sizedIntType->typeSizeParameter = current->sizeParameter;
+            sizedIntType->type.primitiveSize = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
@@ -326,7 +326,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_BX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_BOOL_SIZED, current->location);
-            sizedIntType->typeSizeParameter = current->sizeParameter;
+            sizedIntType->type.primitiveSize = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
@@ -335,7 +335,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_FX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_FLOAT_SIZED, current->location);
-            sizedIntType->typeSizeParameter = current->sizeParameter;
+            sizedIntType->type.primitiveSize = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
