@@ -403,6 +403,8 @@ static laye_ast_node* laye_parse_expression(laye_parser* p)
 
 static laye_ast_node* laye_parse_statement(laye_parser* p)
 {
+    // TODO(local): parse non-expression statements
+
     laye_ast_node* expressionStatement = laye_parse_expression(p);
     assert(expressionStatement != nullptr);
 
@@ -416,8 +418,15 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
     assert(declType != nullptr);
     assert(name != nullptr);
 
-    // TODO(local): parse declarations
-    TODO("parse declaration");
+    // TODO(local): parse functions
+
+    laye_ast_node* bindingDeclaration = laye_ast_node_alloc(LAYE_AST_NODE_BINDING_DECLARATION, name->location);
+    bindingDeclaration->bindingDeclaration.modifiers = modifiers;
+    bindingDeclaration->bindingDeclaration.declaredType = declType;
+    bindingDeclaration->bindingDeclaration.nameToken = name;
+
+    laye_parser_expect(p, LAYE_TOKEN_SEMI_COLON, nullptr);
+    return bindingDeclaration;
 }
 
 static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
@@ -430,7 +439,7 @@ static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
     assert(current != nullptr);
 
     list(laye_ast_modifier) modifiers = nullptr;
-    bool appliedModifiers[LAYE_AST_MODIFIER_COUNT];
+    bool appliedModifiers[LAYE_AST_MODIFIER_COUNT] = { 0 };
 
     while (!laye_parser_is_eof(p))
     {
