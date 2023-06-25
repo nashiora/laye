@@ -434,7 +434,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
             while ((c = lexer_current(l)), (c >= '0' && c <= '9'))
             {
                 u64 digitValue = cast(u64) (c - '0');
-                if ((U64_MAX - digitValue) / 10 > integerValue)
+                if ((U64_MAX - digitValue) / 10 < integerValue)
                     isIntTooLarge = true;
                 
                 if (!isIntTooLarge)
@@ -491,7 +491,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
                         (c >= 'a' && c <= 'z') ? c - 'a' + 10 :
                                                  c - 'A' + 10);
 
-                    if ((U64_MAX - digitValue) / radix > integerValue)
+                    if ((U64_MAX - digitValue) / radix < integerValue)
                         isIntTooLarge = true;
                     
                     if (!isIntTooLarge)

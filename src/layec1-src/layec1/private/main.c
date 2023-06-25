@@ -119,7 +119,7 @@ int main(int argc, char** argv)
     layec_args args = { 0 };
     args_parse(&parser, argc, argv, &args);
 
-    debug_print_args(args);
+    if (args.verbose) debug_print_args(args);
 
     layec_context context = { 0 };
     list(front_end_data*) frontEndsToInvoke = nullptr;
