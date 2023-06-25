@@ -3,6 +3,7 @@
 #include "kos/builtins.h"
 #include "kos/primitives.h"
 #include "kos/string.h"
+#include "kos/utf8.h"
 
 kos_string kos_string_allocate(kos_allocator_function allocator, usize count)
 {
@@ -25,6 +26,7 @@ kos_string kos_string_create(kos_allocator_function allocator, const uchar* memo
 
 kos_string kos_string_deallocate(kos_string s)
 {
+    assert(s.allocator);
     kos_deallocate(s.allocator, cast(void*) s.memory);
 }
 
@@ -140,4 +142,84 @@ bool kos_string_view_ends_with_constant(kos_string_view sv, const char* constant
         return false;
     
     return 0 == memcmp(sv.memory + (sv.count - constantLength), constant, constantLength);
+}
+
+static void kos_string_builder_ensure_capacity(kos_string_builder* sb, usize minCapacity)
+{
+    assert(sb->allocator);
+
+    if (sb->memory == nullptr)
+    {
+        assert(sb->capacity == 0);
+        assert(sb->count == 0);
+
+        sb->memory = kos_allocate(sb->allocator, minCapacity);
+        assert(sb->memory);
+
+        sb->capacity = minCapacity;
+
+        return;
+    }
+
+    assert(sb->memory);
+    assert(sb->capacity != 0);
+
+    if (sb->capacity >= minCapacity)
+        return;
+
+    usize newCapacity = sb->capacity * 2;
+    while (newCapacity < minCapacity)
+        newCapacity = newCapacity * 2;
+
+    sb->memory = kos_reallocate(sb->allocator, sb->memory, newCapacity);
+    assert(sb->memory);
+
+    sb->capacity = newCapacity;
+}
+
+void kos_string_builder_init(kos_string_builder* sb, kos_allocator_function allocator)
+{
+    if (allocator == nullptr)
+        allocator = default_allocator;
+    
+    sb->allocator = allocator;
+    sb->memory = nullptr;
+    sb->count = 0;
+}
+
+void kos_string_builder_deallocate(kos_string_builder* sb)
+{
+    assert(sb->allocator);
+    kos_deallocate(sb->allocator, cast(void*) sb->memory);
+}
+
+kos_string kos_string_builder_to_string(kos_string_builder* sb)
+{
+    assert(sb->allocator);
+    string result = { 0 };
+    result.allocator = sb->allocator;
+    result.count = sb->count;
+    uchar* memory = kos_allocate(result.allocator, result.count + 1);
+    memory[result.count] = 0; // doesn't hurt to nul terminate anyway
+    memcpy(memory, sb->memory, result.count);
+    result.memory = memory;
+    return result;
+}
+
+void kos_string_builder_append_rune(kos_string_builder* sb, rune value)
+{
+    int runeByteCount = kos_utf8_calc_rune_required_byte_count(value);
+    kos_string_builder_ensure_capacity(sb, sb->count + runeByteCount);
+
+    uchar* runeStart = sb->memory + sb->count;
+    kos_utf8_encode_result encodeResult = kos_utf8_encode_rune(cast(char*) runeStart, sb->capacity - sb->count, value);
+
+    if (encodeResult.kind == KOS_UTF8_ENCODE_OK)
+    {
+        sb->count += runeByteCount;
+        return;
+    }
+
+    runeStart[0] = '?';
+    sb->count++;
 }

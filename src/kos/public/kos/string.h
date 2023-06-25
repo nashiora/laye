@@ -24,6 +24,7 @@
 #  define STRING_VIEW_EXPAND KOS_STRING_VIEW_EXPAND
 #  define string kos_string
 #  define string_view kos_string_view
+#  define string_builder kos_string_builder
 
 #  define string_allocate(allocator, count) kos_string_allocate(allocator, count)
 #  define string_create(allocator, memory, count) kos_string_create(allocator, memory, count)
@@ -40,6 +41,11 @@
 #  define string_view_equals_constant(sv, constant) kos_string_view_equals_constant(sv, constant)
 #  define string_view_ends_with(sv, other) kos_string_view_ends_with(sv, other)
 #  define string_view_ends_with_constant(sv, constant) kos_string_view_ends_with_constant(sv, constant)
+
+#  define string_builder_init(sb, allocator) kos_string_builder_init(sb, allocator)
+#  define string_builder_deallocate(sb) kos_string_builder_deallocate(sb)
+#  define string_builder_to_string(sb) kos_string_builder_to_string(sb)
+#  define string_builder_append_rune(sb, value) kos_string_builder_append_rune(sb, value)
 #endif // KOS_NO_SHORT_NAMES
 
 /* owning UTF-8 string. */
@@ -60,6 +66,14 @@ typedef struct kos_string_view
     usize count;
 } kos_string_view;
 
+typedef struct kos_string_builder
+{
+    kos_allocator_function allocator;
+    uchar* memory;
+    usize capacity;
+    usize count;
+} kos_string_builder;
+
 kos_string kos_string_allocate(kos_allocator_function allocator, usize count);
 kos_string kos_string_create(kos_allocator_function allocator, const uchar* memory, usize count);
 kos_string kos_string_deallocate(kos_string s);
@@ -75,5 +89,11 @@ bool kos_string_view_equals(kos_string_view sv, kos_string_view other);
 bool kos_string_view_equals_constant(kos_string_view sv, const char* constant);
 bool kos_string_view_ends_with(kos_string_view sv, kos_string_view other);
 bool kos_string_view_ends_with_constant(kos_string_view sv, const char* constant);
+
+void kos_string_builder_init(kos_string_builder* sb, kos_allocator_function allocator);
+void kos_string_builder_deallocate(kos_string_builder* sb);
+kos_string kos_string_builder_to_string(kos_string_builder* sb);
+
+void kos_string_builder_append_rune(kos_string_builder* sb, rune value);
 
 #endif // KOS_STRING_H

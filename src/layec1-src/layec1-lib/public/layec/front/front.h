@@ -4,6 +4,7 @@
 #include "layec/compiler.h"
 
 #define LAYEC_CHAR_TOKENS \
+    CHAR(END_OF_FILE, '\0', "<eof>") \
     CHAR(BACKTICK, '`', "`") \
     CHAR(TILDE, '~', "~") \
     CHAR(BANG, '!', "!") \
@@ -39,7 +40,8 @@
 typedef enum layec_front_end_status
 {
     LAYEC_FRONT_SUCCESS = 0,
-    LAYEC_FRONT_NO_INPUT_FILES = 0,
+    LAYEC_FRONT_NO_INPUT_FILES,
+    LAYEC_FRONT_PARSE_FAILED,
 } layec_front_end_status;
 
 typedef layec_front_end_status (*layec_front_end_entry_function)(layec_context* context, list(layec_fileid) inputFiles);
