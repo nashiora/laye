@@ -28,6 +28,7 @@
     T(GREATER_EQUAL, ">=") \
     T(LES_LESS_EQUAL, "<<=") \
     T(GREATER_GREATER_EQUAL, ">>=") \
+    T(EQUAL_GREATER, "=>") \
     T(COLON_COLON, "::") \
     T(BX, "<sized bool type name>") \
     T(IX, "<sized signed integer type name>") \

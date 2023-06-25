@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 
 #include "kos/args.h"
@@ -18,6 +19,8 @@ typedef struct layec_file_info
 
 typedef struct layec_args
 {
+    bool verbose;
+    bool help;
     string_view outputFileName;
     list(layec_file_info) files;
 } layec_args;
@@ -28,6 +31,8 @@ static const char layec_usage[] = "layec [options...] [files...]";
 static args_parse_status layec_args_parser(arg_parsed arg, args_state* state);
 
 static arg_option options[] = {
+    { "verbose", 0, nullptr, "Generate verbose output" },
+    { "help", 0, nullptr, "Display this help message" },
     { "out", 'o', "file", "Write output to <file>" },
     { 0    , 'x', "language", "Treat the subsequent input files as having type <language>" },
     { 0 },
@@ -64,7 +69,11 @@ static args_parse_status layec_args_parser(arg_parsed arg, args_state* state)
     }
     else if (arg.kind == KOS_ARG_LONG)
     {
-        if (string_view_equals_constant(arg.longOption, "out"))
+        if (string_view_equals_constant(arg.longOption, "verbose"))
+            args->verbose = true;
+        else if (string_view_equals_constant(arg.longOption, "help"))
+            args->help = true;
+        else if (string_view_equals_constant(arg.longOption, "out"))
             args->outputFileName = arg.value;
         else return KOS_ARGS_PARSED_ERR_UNKNOWN;
     }
@@ -118,6 +127,8 @@ int main(int argc, char** argv)
     for (usize i = 0; i < arrlenu(args.files); i++)
     {
         layec_file_info fileInfo = args.files[i];
+        if (args.verbose) fprintf(stderr, "layec: reading contents of file '" STRING_VIEW_FORMAT "'\n", STRING_VIEW_EXPAND(fileInfo.fileName));
+
         platform_read_file_status readStatus = 0;
         string fileSource = platform_read_file(string_view_to_cstring(fileInfo.fileName, nullptr), nullptr, &readStatus);
 
@@ -129,7 +140,9 @@ int main(int argc, char** argv)
         }
         
         layec_fileid fileId = layec_context_add_file(&context, fileInfo.fileName, fileSource);
+        if (args.verbose) fprintf(stderr, "layec: determining what to do with file '" STRING_VIEW_FORMAT "'\n", STRING_VIEW_EXPAND(fileInfo.fileName));
 
+        bool foundFrontEndForFile = false;
         for (usize j = 0; frontEndInfos[j].name != NULL; j++)
         {
             language_front_end_info frontEndInfo = frontEndInfos[j];
@@ -164,7 +177,13 @@ int main(int argc, char** argv)
             }
 
             arrput(frontEndData->files, fileId);
+            foundFrontEndForFile = true;
             break;
+        }
+
+        if (!foundFrontEndForFile)
+        {
+            fprintf(stderr, "layec: unable to determine suitable front end for file '" STRING_VIEW_FORMAT "'\n", STRING_VIEW_EXPAND(fileInfo.fileName));
         }
     }
 
@@ -172,6 +191,8 @@ int main(int argc, char** argv)
     for (usize k = 0; k < arrlenu(frontEndsToInvoke); k++)
     {
         front_end_data* frontEndData = frontEndsToInvoke[k];
+        if (args.verbose) fprintf(stderr, "layec: invoking front end '%s'\n", frontEndData->name);
+
         layec_front_end_status status = frontEndData->entryFunction(&context, frontEndData->files);
 
         if (status != LAYEC_FRONT_SUCCESS)

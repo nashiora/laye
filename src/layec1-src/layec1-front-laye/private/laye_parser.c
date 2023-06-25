@@ -152,15 +152,9 @@ static laye_token* laye_parser_current(laye_parser* p)
 static layec_location laye_parser_eof_location(laye_parser* p)
 {
     assert(p != nullptr);
-    
-    usize offset = 0;
-    if (arrlenu(p->tokens) > 0)
-    {
-        laye_token* lastToken = p->tokens[arrlenu(p->tokens)];
-        offset = lastToken->location.offset + lastToken->location.length;
-    }
 
-    return (layec_location){ .fileId = p->fileId, .offset = offset, .length = 0 };
+    string fileSource = layec_context_get_file_source(p->context, p->fileId);
+    return (layec_location){ .fileId = p->fileId, .offset = fileSource.count, .length = 0 };
 }
 
 static bool laye_parser_check(laye_parser* p, laye_token_kind kind)
@@ -174,10 +168,22 @@ static bool laye_parser_check(laye_parser* p, laye_token_kind kind)
     return current->kind == kind;
 }
 
+static bool laye_parser_peek_check(laye_parser* p, laye_token_kind kind)
+{
+    assert(p != nullptr);
+    if (p->currentTokenIndex + 1 >= arrlenu(p->tokens))
+        return false;
+    
+    laye_token* current = p->tokens[p->currentTokenIndex + 1];
+    assert(current != nullptr);
+
+    return current->kind == kind;
+}
+
 static void laye_parser_expect_out(laye_parser* p, laye_token_kind kind, const char* fmt, laye_token** outToken)
 {
     assert(p != nullptr);
-
+    
     if (laye_parser_is_eof(p))
     {
         if (fmt == nullptr)
@@ -227,6 +233,15 @@ static void laye_parser_expect_out(laye_parser* p, laye_token_kind kind, const c
 static void laye_parser_expect(laye_parser* p, laye_token_kind kind, const char* fmt)
 {
     laye_parser_expect_out(p, kind, fmt, nullptr);
+}
+
+static laye_token* laye_parser_expect_identifier(laye_parser* p, const char* fmt)
+{
+    laye_token* identifierToken = nullptr;
+    if (fmt == nullptr)
+        fmt = "Identifier expected.";
+    laye_parser_expect_out(p, LAYE_TOKEN_IDENTIFIER, fmt, &identifierToken);
+    return identifierToken;
 }
 
 /// @brief Attempts to parse a type suffix.
@@ -401,8 +416,18 @@ static laye_ast_node* laye_parse_expression(laye_parser* p)
     return secondary;
 }
 
+static laye_ast_node* laye_parse_grouped_statement(laye_parser* p)
+{
+    assert(p != nullptr);
+    assert(laye_parser_check(p, '{'));
+
+    // TODO(local); parse grouped statements;
+    TODO("parse grouped statements");
+}
+
 static laye_ast_node* laye_parse_statement(laye_parser* p)
 {
+    assert(p != nullptr);
     // TODO(local): parse non-expression statements
 
     laye_ast_node* expressionStatement = laye_parse_expression(p);
@@ -419,6 +444,78 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
     assert(name != nullptr);
 
     // TODO(local): parse functions
+    if (laye_parser_check(p, '('))
+    {
+        laye_parser_advance(p);
+
+        list(laye_ast_node*) parameterBindingNodes = nullptr;
+        while (!laye_parser_is_eof(p))
+        {
+            if (laye_parser_check(p, ')'))
+                break;
+
+            laye_ast_node* paramTypeSyntax = nullptr;
+            laye_token* paramNameToken = nullptr;
+
+            laye_ast_node* paramBinding = nullptr;
+
+            if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER) && laye_parser_peek_check(p, ','))
+            {
+                paramNameToken = laye_parser_current(p);
+                laye_parser_advance(p);
+
+                paramTypeSyntax = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_ERROR, paramNameToken->location);
+
+                layec_issue_diagnostic(p->context, SEV_ERROR, paramNameToken->location, "Parameter type missing.");
+            }
+            else
+            {
+                bool typeParseResult = laye_parser_try_parse_type(p, &paramTypeSyntax, true);
+
+                // if we pass `true` for diagnostic issuing, we should *always* get back a value, even if it's invalid.
+                assert(typeParseResult == true);
+
+                paramNameToken = laye_parser_expect_identifier(p, nullptr);
+                laye_parser_advance(p);
+            }
+            
+            assert(paramTypeSyntax != nullptr);
+            assert(paramNameToken != nullptr);
+            
+            paramBinding = laye_ast_node_alloc(LAYE_AST_NODE_BINDING_DECLARATION, layec_location_combine(paramTypeSyntax->location, paramNameToken->location));
+            paramBinding->bindingDeclaration.declaredType = paramTypeSyntax;
+            paramBinding->bindingDeclaration.nameToken = paramNameToken;
+
+            arrput(parameterBindingNodes, paramBinding);
+            
+            if (laye_parser_check(p, ','))
+            {
+                laye_parser_advance(p);
+                continue;
+            }
+            else break;
+        }
+
+        laye_parser_expect(p, ')', nullptr);
+
+        laye_ast_node* functionBody = nullptr;
+        if (laye_parser_check(p, '{'))
+            functionBody = laye_parse_grouped_statement(p);
+        else if (laye_parser_check(p, LAYE_TOKEN_EQUAL_GREATER))
+        {
+            laye_parser_advance(p);
+            functionBody = laye_parse_expression(p);
+            laye_parser_expect(p, ';', nullptr);
+        }
+        else laye_parser_expect(p, ';', nullptr);
+
+        laye_ast_node* functionDeclaration = laye_ast_node_alloc(LAYE_AST_NODE_FUNCTION_DECLARATION, name->location);
+        functionDeclaration->functionDeclaration.modifiers = modifiers;
+        functionDeclaration->functionDeclaration.returnType = declType;
+        functionDeclaration->functionDeclaration.nameToken = name;
+
+        return functionDeclaration;
+    }
 
     laye_ast_node* bindingDeclaration = laye_ast_node_alloc(LAYE_AST_NODE_BINDING_DECLARATION, name->location);
     bindingDeclaration->bindingDeclaration.modifiers = modifiers;

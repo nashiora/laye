@@ -26,4 +26,6 @@ typedef struct layec_location
     usize offset, length;
 } layec_location;
 
+layec_location layec_location_combine(layec_location a, layec_location b);
+
 #endif // LAYEC_DIAGNOSTIC_H

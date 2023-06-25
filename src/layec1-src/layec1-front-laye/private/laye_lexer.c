@@ -236,6 +236,11 @@ static laye_token* lexer_get_token(laye_lexer* l)
                 lexer_advance(l);
                 token->kind = LAYE_TOKEN_EQUAL_EQUAL;
             }
+            else if (c == '>')
+            {
+                lexer_advance(l);
+                token->kind = LAYE_TOKEN_EQUAL_GREATER;
+            }
             else
             {
                 token->kind = cast(laye_token_kind) '=';
