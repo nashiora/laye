@@ -17,13 +17,6 @@ typedef struct laye_parser
     usize currentTokenIndex;
 } laye_parser;
 
-static struct
-{
-    void* memory;
-    usize byteCapacity;
-    usize bytesConsumed;
-} ast_node_allocator_state = { 0 };
-
 static void* ast_node_allocator(allocator_action action, void* memory, usize count)
 {
     switch (action)
@@ -31,19 +24,7 @@ static void* ast_node_allocator(allocator_action action, void* memory, usize cou
         case KOS_ALLOC_ALLOCATE:
         {
             assert(count == sizeof(laye_ast_node));
-            if (ast_node_allocator_state.bytesConsumed + count >= ast_node_allocator_state.byteCapacity)
-            {
-                usize newCapacity = ast_node_allocator_state.byteCapacity + AST_ALLOCATOR_BLOCK_SIZE;
-                void* newMemory = reallocate(default_allocator, ast_node_allocator_state.memory, newCapacity);
-                assert(newMemory);
-                ast_node_allocator_state.memory = newMemory;
-                ast_node_allocator_state.byteCapacity = newCapacity;
-            }
-
-            void* resultAddress = (cast(char*) ast_node_allocator_state.memory) + ast_node_allocator_state.bytesConsumed;
-            ast_node_allocator_state.bytesConsumed += count;
-
-            return resultAddress;
+            return default_allocator(action, memory, count);
         }
 
         case KOS_ALLOC_REALLOCATE: ICE("should never attempt to reallocate an AST node"); return nullptr;
@@ -72,6 +53,9 @@ void laye_ast_node_dealloc(laye_ast_node* node)
     deallocate(AST_ALLOCATOR, node);
 }
 
+
+static void laye_parser_check_file_headers(laye_parser *p, laye_ast* ast);
+
 laye_parse_result laye_parse(layec_context* context, layec_fileid fileId)
 {
     assert(context != nullptr);
@@ -83,13 +67,15 @@ laye_parse_result laye_parse(layec_context* context, layec_fileid fileId)
         .context = context,
         .fileId = fileId,
     };
-    
+
     parser.tokens = laye_lex(context, fileId);
     if (parser.tokens == nullptr)
     {
         result.status = LAYE_PARSE_FAILURE;
         return result;
     }
+    
+    laye_parser_check_file_headers(&parser, &result.ast);
 
     while (!laye_parser_is_eof(&parser))
     {
@@ -244,6 +230,68 @@ static laye_token* laye_parser_expect_identifier(laye_parser* p, const char* fmt
     return identifierToken;
 }
 
+static laye_ast_import laye_parse_import_declaration(laye_parser* p, bool export)
+{
+    assert(p != nullptr);
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+    assert(current->kind == LAYE_TOKEN_IMPORT);
+
+    laye_parser_advance(p);
+
+    laye_ast_import result = { 0 };
+    result.export = export;
+
+    if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER))
+    {
+        result.name = layec_intern_string_view(p->context, laye_parser_current(p)->atom);
+        laye_parser_advance(p);
+    }
+    else
+    {
+        laye_token* stringToken = nullptr;
+        laye_parser_expect_out(p, LAYE_TOKEN_LITERAL_STRING, "String literal expected as import library or file name.", &stringToken);
+        result.name = layec_intern_string_view(p->context, stringToken->atom);
+    }
+
+    laye_parser_expect(p, ';', nullptr);
+    return result;
+}
+
+static void laye_parser_check_file_headers(laye_parser *p, laye_ast* ast)
+{
+    while (!laye_parser_is_eof(p))
+    {
+        usize startIndex = p->currentTokenIndex;
+        bool isExport = false;
+
+        if (laye_parser_check(p, LAYE_TOKEN_EXPORT))
+        {
+            isExport = true;
+            laye_parser_advance(p);
+        }
+
+        laye_token* current = laye_parser_current(p);
+        assert(current != nullptr);
+
+        switch (current->kind)
+        {
+            case LAYE_TOKEN_IMPORT:
+            {
+                laye_ast_import importData = laye_parse_import_declaration(p, isExport);
+                arrput(ast->imports, importData);
+            } continue;
+
+            default:
+            {
+                p->currentTokenIndex = startIndex;
+                return;
+            }
+        }
+    }
+}
+
 /// @brief Attempts to parse a type suffix.
 /// @param p The parser to use to parse a type suffix.
 /// @param typeSyntax The input base type syntax, and where to put the result type syntax node.
@@ -308,7 +356,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_IX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_INT_SIZED, current->location);
-            sizedIntType->type.primitiveSize = current->sizeParameter;
+            sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
@@ -317,7 +365,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_UX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_UINT_SIZED, current->location);
-            sizedIntType->type.primitiveSize = current->sizeParameter;
+            sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
@@ -326,7 +374,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_BX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_BOOL_SIZED, current->location);
-            sizedIntType->type.primitiveSize = current->sizeParameter;
+            sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
@@ -335,7 +383,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_FX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_FLOAT_SIZED, current->location);
-            sizedIntType->type.primitiveSize = current->sizeParameter;
+            sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
@@ -385,7 +433,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
         {
             laye_ast_node* resultNode = laye_ast_node_alloc(LAYE_AST_NODE_EXPRESSION_INTEGER, current->location);
             assert(resultNode != nullptr);
-            resultNode->literal = current;
+            resultNode->literal.integerValue = current->integerValue;
             laye_parser_advance(p);
             return laye_parse_primary_suffix(p, resultNode);
         }
@@ -484,7 +532,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
             
             paramBinding = laye_ast_node_alloc(LAYE_AST_NODE_BINDING_DECLARATION, layec_location_combine(paramTypeSyntax->location, paramNameToken->location));
             paramBinding->bindingDeclaration.declaredType = paramTypeSyntax;
-            paramBinding->bindingDeclaration.nameToken = paramNameToken;
+            paramBinding->bindingDeclaration.name = layec_intern_string_view(p->context, paramNameToken->atom);
 
             arrput(parameterBindingNodes, paramBinding);
             
@@ -512,7 +560,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         laye_ast_node* functionDeclaration = laye_ast_node_alloc(LAYE_AST_NODE_FUNCTION_DECLARATION, name->location);
         functionDeclaration->functionDeclaration.modifiers = modifiers;
         functionDeclaration->functionDeclaration.returnType = declType;
-        functionDeclaration->functionDeclaration.nameToken = name;
+        functionDeclaration->functionDeclaration.name = layec_intern_string_view(p->context, name->atom);
 
         return functionDeclaration;
     }
@@ -520,7 +568,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
     laye_ast_node* bindingDeclaration = laye_ast_node_alloc(LAYE_AST_NODE_BINDING_DECLARATION, name->location);
     bindingDeclaration->bindingDeclaration.modifiers = modifiers;
     bindingDeclaration->bindingDeclaration.declaredType = declType;
-    bindingDeclaration->bindingDeclaration.nameToken = name;
+    bindingDeclaration->bindingDeclaration.name = layec_intern_string_view(p->context, name->atom);
 
     laye_parser_expect(p, LAYE_TOKEN_SEMI_COLON, nullptr);
     return bindingDeclaration;

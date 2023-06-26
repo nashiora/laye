@@ -516,6 +516,8 @@ static laye_token* lexer_get_token(laye_lexer* l)
             lexer_advance(l);
 
             string_builder stringBuilder = { 0 };
+            string_builder_init(&stringBuilder, default_allocator);
+
             while (!lexer_is_eof(l))
             {
                 c = lexer_current(l);
@@ -547,7 +549,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
             }
             else lexer_advance(l);
 
-            token->kind = LAYE_TOKEN_STRING;
+            token->kind = LAYE_TOKEN_LITERAL_STRING;
             token->stringValue = string_builder_to_string(&stringBuilder);
             string_builder_deallocate(&stringBuilder);
         } break;

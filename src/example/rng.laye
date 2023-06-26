@@ -1,0 +1,1 @@
+export i32 get_random_i32() => 420;

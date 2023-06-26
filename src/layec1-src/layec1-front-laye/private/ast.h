@@ -82,6 +82,13 @@ LAYE_AST_NODE_KINDS
 #undef A
 } laye_ast_node_kind;
 
+typedef enum laye_ast_type_access
+{
+    LAYE_AST_ACCESS_NONE,
+    LAYE_AST_ACCESS_READONLY,
+    LAYE_AST_ACCESS_WRITEONLY,
+} laye_ast_type_access;
+
 typedef enum laye_ast_modifier_kind
 {
     LAYE_AST_MODIFIER_INVALID,
@@ -106,9 +113,27 @@ typedef struct laye_ast_modifier
 
 typedef struct laye_ast_enum_variant
 {
-    laye_token* nameToken;
+    string name;
     list(laye_ast_node*) fieldBindings;
 } laye_ast_enum_variant;
+
+typedef struct laye_ast_import
+{
+    // could be sourced from an identifier or a string.
+    string name;
+    // used to rename the inferred namespace, or to define one where one cannot be inferred otherwise.
+    // e.g. `import "std";` creates the namespace `std`, as does `import "my fun library" as std;`.
+    string alias;
+
+    // `import * from "std";`
+    bool allMembers;
+    // `import foo, bar from "std";`
+    list(string) explicitMembers;
+
+    // True if this import should also be publicly exported, false otherwise.
+    // e.g. `export import "sublib.laye";`
+    bool export;
+} laye_ast_import;
 
 struct laye_ast_node
 {
@@ -117,18 +142,34 @@ struct laye_ast_node
 
     union
     {
-        laye_token* literal;
+        union
+        {
+            u64 integerValue;
+            string stringValue;
+        } literal;
 
+        union
+        {
+            // for primitive container types like strings
+            laye_ast_type_access access;
+            // for arbitrary-sized primitive types like i32
+            int size;
+        } primitiveType;
+
+        // for container types like pointers or arrays
         struct
         {
-            int primitiveSize;
-        } type;
+            laye_ast_type_access access;
+            laye_ast_node* elementType;
+            // array dimension expressions
+            list(laye_ast_node*) ranks;
+        } containerType;
 
         struct
         {
             list(laye_ast_modifier) modifiers;
             laye_ast_node* declaredType;
-            laye_token* nameToken;
+            string name;
             laye_ast_node* initialValue;
         } bindingDeclaration;
 
@@ -136,7 +177,7 @@ struct laye_ast_node
         {
             list(laye_ast_modifier) modifiers;
             laye_ast_node* returnType;
-            laye_token* nameToken;
+            string name;
             list(laye_ast_node*) parameterBindings;
             laye_ast_node* body;
         } functionDeclaration;
@@ -144,14 +185,14 @@ struct laye_ast_node
         struct
         {
             list(laye_ast_modifier) modifiers;
-            laye_token* nameToken;
+            string name;
             list(laye_ast_node*) fieldBindings;
         } structDeclaration;
 
         struct
         {
             list(laye_ast_modifier) modifiers;
-            laye_token* nameToken;
+            string name;
             list(laye_ast_enum_variant) variants;
         } enumDeclaration;
     };
@@ -160,7 +201,7 @@ struct laye_ast_node
 typedef struct laye_ast
 {
     layec_fileid fileId;
-    // TODO(local): modules/imports
+    list(laye_ast_import) imports;
     list(laye_ast_node*) topLevelNodes;
 } laye_ast;
 

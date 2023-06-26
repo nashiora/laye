@@ -86,6 +86,22 @@ string_view layec_view_from_location(layec_context* context, layec_location loc)
     return (string_view){ source.memory + loc.offset, loc.length };
 }
 
+// TODO(local): actually figure out a mechanism for interning strings
+string layec_intern_string_view(layec_context* context, string_view view)
+{
+    char* memory = allocate(default_allocator, view.count + 1);
+    memcpy(memory, view.memory, view.count);
+    memory[view.count] = 0;
+
+    string newIntern = (string){
+        .allocator = default_allocator,
+        .memory = (const char*)memory,
+        .count = view.count,
+    };
+
+    return newIntern;
+}
+
 void layec_issue_diagnostic(layec_context* context, layec_diagnostic_severity severity, layec_location loc, const char* fmt, ...)
 {
     va_list ap;

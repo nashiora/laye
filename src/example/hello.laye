@@ -1,1 +1,5 @@
+import std;
+
+import "rng.laye";
+
 i32 main() => 69;
