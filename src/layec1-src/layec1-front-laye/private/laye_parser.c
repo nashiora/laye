@@ -497,20 +497,67 @@ static laye_ast_node* laye_parse_grouped_statement(laye_parser* p)
     assert(p != nullptr);
     assert(laye_parser_check(p, '{'));
 
-    // TODO(local); parse grouped statements;
-    TODO("parse grouped statements");
+    laye_token* firstToken = laye_parser_current(p);
+    laye_parser_advance(p);
+
+    list(laye_ast_node*) body = nullptr;
+
+    while (!laye_parser_is_eof(p) && !laye_parser_check(p, '}'))
+    {
+        laye_ast_node* declarationOrStatement = laye_parse_declaration_or_statement(p);
+        arrput(body, declarationOrStatement);
+    }
+
+    laye_token* lastToken = nullptr;
+    laye_parser_expect_out(p, '}', nullptr, &lastToken);
+
+    layec_location groupLocation = layec_location_combine(firstToken->location, lastToken->location);
+
+    laye_ast_node* groupedStatement = laye_ast_node_alloc(LAYE_AST_NODE_STATEMENT_BLOCK, groupLocation);
+    groupedStatement->statements = body;
+
+    return groupedStatement;
 }
 
 static laye_ast_node* laye_parse_statement(laye_parser* p)
 {
     assert(p != nullptr);
-    // TODO(local): parse non-expression statements
 
-    laye_ast_node* expressionStatement = laye_parse_expression(p);
-    assert(expressionStatement != nullptr);
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
 
-    laye_parser_expect(p, LAYE_TOKEN_SEMI_COLON, nullptr);
-    return expressionStatement;
+    switch (current->kind)
+    {
+        case LAYE_TOKEN_RETURN:
+        {
+            layec_location returnLocation = current->location;
+            laye_parser_advance(p);
+
+            laye_ast_node* returnValue = nullptr;
+            if (!laye_parser_check(p, ';'))
+            {
+                returnValue = laye_parse_expression(p);
+                returnLocation = layec_location_combine(returnLocation, returnValue->location);
+            }
+
+            laye_parser_expect(p, ';', nullptr);
+
+            laye_ast_node* returnNode = laye_ast_node_alloc(LAYE_AST_NODE_STATEMENT_RETURN, returnLocation);
+            returnNode->returnValue = returnValue;
+            return returnNode;
+        }
+
+        default:
+        {
+            // TODO(local): parse assignments
+
+            laye_ast_node* expressionStatement = laye_parse_expression(p);
+            assert(expressionStatement != nullptr);
+
+            laye_parser_expect(p, LAYE_TOKEN_SEMI_COLON, nullptr);
+            return expressionStatement;
+        }
+    }
 }
 
 static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_ast_modifier) modifiers, laye_ast_node* declType, laye_token* name)

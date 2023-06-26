@@ -195,6 +195,10 @@ struct laye_ast_node
             string name;
             list(laye_ast_enum_variant) variants;
         } enumDeclaration;
+
+        list(laye_ast_node*) statements;
+
+        laye_ast_node* returnValue;
     };
 };
 
