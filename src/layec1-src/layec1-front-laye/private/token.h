@@ -68,21 +68,21 @@
     K(FLOAT, "float") \
     K(ISIZE, "isize") \
     K(USIZE, "usize") \
-    K(CCHAR, "cchar") \
-    K(CSCHAR, "cschar") \
-    K(CUCHAR, "cuchar") \
-    K(CSHORT, "cshort") \
-    K(CUSHORT, "cushort") \
-    K(CSINT, "cint") \
-    K(CUINT, "cuint") \
-    K(CLONG, "clong") \
-    K(CULONG, "culong") \
-    K(CLONGLONG, "clonglong") \
-    K(CULONGLONG, "culonglong") \
-    K(CFLOAT, "cfloat") \
-    K(CDOUBLE, "cdouble") \
-    K(CLONGDOUBLE, "clongdouble") \
-    K(CBOOL, "cbool") \
+    K(CCHAR, "c_char") \
+    K(CSCHAR, "c_schar") \
+    K(CUCHAR, "c_uchar") \
+    K(CSHORT, "c_short") \
+    K(CUSHORT, "c_ushort") \
+    K(CSINT, "c_int") \
+    K(CUINT, "c_uint") \
+    K(CLONG, "c_long") \
+    K(CULONG, "c_ulong") \
+    K(CLONGLONG, "c_longlong") \
+    K(CULONGLONG, "c_ulonglong") \
+    K(CFLOAT, "c_float") \
+    K(CDOUBLE, "c_double") \
+    K(CLONGDOUBLE, "c_longdouble") \
+    K(CBOOL, "c_bool") \
     K(CAST, "cast") \
     K(SIZEOF, "sizeof") \
     K(ALIGNOF, "alignof") \
