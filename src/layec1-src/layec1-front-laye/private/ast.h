@@ -197,7 +197,6 @@ struct laye_ast_node
         } enumDeclaration;
 
         list(laye_ast_node*) statements;
-
         laye_ast_node* returnValue;
     };
 };
