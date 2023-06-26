@@ -54,7 +54,7 @@ void laye_ast_node_dealloc(laye_ast_node* node)
 }
 
 
-static void laye_parser_check_file_headers(laye_parser *p, laye_ast* ast);
+static void laye_parser_read_file_headers(laye_parser *p, laye_ast* ast);
 
 laye_parse_result laye_parse(layec_context* context, layec_fileid fileId)
 {
@@ -75,7 +75,7 @@ laye_parse_result laye_parse(layec_context* context, layec_fileid fileId)
         return result;
     }
     
-    laye_parser_check_file_headers(&parser, &result.ast);
+    laye_parser_read_file_headers(&parser, &result.ast);
 
     while (!laye_parser_is_eof(&parser))
     {
@@ -152,6 +152,21 @@ static bool laye_parser_check(laye_parser* p, laye_token_kind kind)
     assert(current != nullptr);
 
     return current->kind == kind;
+}
+
+static bool laye_parser_check_conditional_keyword(laye_parser* p, const char* keyword)
+{
+    assert(p != nullptr);
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+
+    if (current->kind != LAYE_TOKEN_IDENTIFIER || strlen(keyword) != current->atom.count)
+    {
+        return false;
+    }
+
+    return 0 == strncmp(keyword, current->atom.memory, current->atom.count);
 }
 
 static bool laye_parser_peek_check(laye_parser* p, laye_token_kind kind)
@@ -245,21 +260,34 @@ static laye_ast_import laye_parse_import_declaration(laye_parser* p, bool export
 
     if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER))
     {
-        result.name = layec_intern_string_view(p->context, laye_parser_current(p)->atom);
+        current = laye_parser_current(p);
+        assert(current != nullptr);
+        result.name = layec_intern_string_view(p->context, current->atom);
         laye_parser_advance(p);
     }
     else
     {
         laye_token* stringToken = nullptr;
         laye_parser_expect_out(p, LAYE_TOKEN_LITERAL_STRING, "String literal expected as import library or file name.", &stringToken);
+        assert(stringToken != nullptr);
+        assert(stringToken->atom.count > 0);
         result.name = layec_intern_string_view(p->context, stringToken->atom);
+    }
+
+    if (laye_parser_check_conditional_keyword(p, "as"))
+    {
+        laye_parser_advance(p);
+        laye_token* aliasToken = laye_parser_expect_identifier(p, nullptr);
+        assert(aliasToken != nullptr);
+        assert(aliasToken->atom.count > 0);
+        result.alias = layec_intern_string_view(p->context, aliasToken->atom);
     }
 
     laye_parser_expect(p, ';', nullptr);
     return result;
 }
 
-static void laye_parser_check_file_headers(laye_parser *p, laye_ast* ast)
+static void laye_parser_read_file_headers(laye_parser *p, laye_ast* ast)
 {
     while (!laye_parser_is_eof(p))
     {

@@ -1,5 +1,4 @@
 import std;
-
-import "rng.laye";
+import "rng.laye" as random;
 
 i32 main() => 69;
