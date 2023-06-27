@@ -457,6 +457,16 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
 
     switch (current->kind)
     {
+        case LAYE_TOKEN_IDENTIFIER:
+        {
+            // TODO(local): a::x and a.x, here or in prefix parser
+            laye_ast_node* resultNode = laye_ast_node_alloc(LAYE_AST_NODE_EXPRESSION_LOOKUP, current->location);
+            assert(resultNode != nullptr);
+            resultNode->lookupName = layec_intern_string_view(p->context, current->atom);
+            laye_parser_advance(p);
+            return laye_parse_primary_suffix(p, resultNode);
+        }
+
         case LAYE_TOKEN_LITERAL_INTEGER:
         {
             laye_ast_node* resultNode = laye_ast_node_alloc(LAYE_AST_NODE_EXPRESSION_INTEGER, current->location);
@@ -474,7 +484,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
     }
 }
 
-static laye_ast_node* laye_parse_secondary(laye_parser* p, laye_ast_node* left)
+static laye_ast_node* laye_parse_secondary(laye_parser* p, laye_ast_node* left, int precedence)
 {
     return left;
 }
@@ -486,7 +496,7 @@ static laye_ast_node* laye_parse_expression(laye_parser* p)
     laye_ast_node* primary = laye_parse_primary(p);
     assert(primary != nullptr);
 
-    laye_ast_node* secondary = laye_parse_secondary(p, primary);
+    laye_ast_node* secondary = laye_parse_secondary(p, primary, 0);
     assert(secondary != nullptr);
 
     return secondary;
@@ -549,13 +559,27 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
 
         default:
         {
-            // TODO(local): parse assignments
+            laye_ast_node* statement = laye_parse_expression(p);
+            assert(statement != nullptr);
 
-            laye_ast_node* expressionStatement = laye_parse_expression(p);
-            assert(expressionStatement != nullptr);
+            if (laye_parser_check(p, '='))
+            {
+                laye_parser_advance(p);
+
+                laye_ast_node* assignValue = laye_parse_expression(p);
+                assert(assignValue != nullptr);
+
+                laye_ast_node* assignNode = laye_ast_node_alloc(LAYE_AST_NODE_STATEMENT_ASSIGNMENT, layec_location_combine(statement->location, assignValue->location));
+                assignNode->assignment.target = statement;
+                assignNode->assignment.value = assignValue;
+
+                statement = assignNode;
+            }
 
             laye_parser_expect(p, LAYE_TOKEN_SEMI_COLON, nullptr);
-            return expressionStatement;
+            
+            assert(statement != nullptr);
+            return statement;
         }
     }
 }
@@ -644,6 +668,16 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
     bindingDeclaration->bindingDeclaration.modifiers = modifiers;
     bindingDeclaration->bindingDeclaration.declaredType = declType;
     bindingDeclaration->bindingDeclaration.name = layec_intern_string_view(p->context, name->atom);
+
+    if (laye_parser_check(p, '='))
+    {
+        laye_parser_advance(p);
+
+        laye_ast_node* assignValue = laye_parse_expression(p);
+        assert(assignValue != nullptr);
+
+        bindingDeclaration->bindingDeclaration.initialValue = assignValue;
+    }
 
     laye_parser_expect(p, LAYE_TOKEN_SEMI_COLON, nullptr);
     return bindingDeclaration;

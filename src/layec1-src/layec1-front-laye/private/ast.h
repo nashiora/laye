@@ -144,12 +144,6 @@ struct laye_ast_node
     {
         union
         {
-            u64 integerValue;
-            string stringValue;
-        } literal;
-
-        union
-        {
             // for primitive container types like strings
             laye_ast_type_access access;
             // for arbitrary-sized primitive types like i32
@@ -196,8 +190,22 @@ struct laye_ast_node
             list(laye_ast_enum_variant) variants;
         } enumDeclaration;
 
+        struct
+        {
+            laye_ast_node* target;
+            laye_ast_node* value;
+        } assignment;
+
         list(laye_ast_node*) statements;
         laye_ast_node* returnValue;
+
+        string lookupName;
+
+        union
+        {
+            u64 integerValue;
+            string stringValue;
+        } literal;
     };
 };
 

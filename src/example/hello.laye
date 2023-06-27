@@ -1,4 +1,6 @@
 i32 main()
 {
-    return 69;
+    i32 retval = 42;
+    retval = 69;
+    return retval;
 }
