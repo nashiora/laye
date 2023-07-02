@@ -216,7 +216,4 @@ typedef struct laye_ast
     list(laye_ast_node*) topLevelNodes;
 } laye_ast;
 
-laye_ast_node* laye_ast_node_alloc(laye_ast_node_kind kind, layec_location location);
-void laye_ast_node_dealloc(laye_ast_node* node);
-
 #endif // AST_H

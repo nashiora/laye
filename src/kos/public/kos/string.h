@@ -44,7 +44,8 @@
 
 #  define string_builder_init(sb, allocator) kos_string_builder_init(sb, allocator)
 #  define string_builder_deallocate(sb) kos_string_builder_deallocate(sb)
-#  define string_builder_to_string(sb) kos_string_builder_to_string(sb)
+#  define string_builder_to_string(sb, allocator) kos_string_builder_to_string(sb, allocator)
+#  define string_builder_to_string_arena(sb, arena) kos_string_builder_to_string_arena(sb, arena)
 #  define string_builder_append_rune(sb, value) kos_string_builder_append_rune(sb, value)
 #endif // KOS_NO_SHORT_NAMES
 
@@ -92,7 +93,8 @@ bool kos_string_view_ends_with_constant(kos_string_view sv, const char* constant
 
 void kos_string_builder_init(kos_string_builder* sb, kos_allocator_function allocator);
 void kos_string_builder_deallocate(kos_string_builder* sb);
-kos_string kos_string_builder_to_string(kos_string_builder* sb);
+kos_string kos_string_builder_to_string(kos_string_builder* sb, kos_allocator_function allocator);
+kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_allocator* arena);
 
 void kos_string_builder_append_rune(kos_string_builder* sb, rune value);
 

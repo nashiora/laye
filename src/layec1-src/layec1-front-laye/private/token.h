@@ -84,6 +84,7 @@
     K(CLONGDOUBLE, "c_longdouble") \
     K(CBOOL, "c_bool") \
     K(CAST, "cast") \
+    K(DISCARD, "discard") \
     K(SIZEOF, "sizeof") \
     K(ALIGNOF, "alignof") \
     K(OFFSETOF, "offsetof") \
@@ -129,8 +130,5 @@ typedef struct laye_token
         string stringValue;
     };
 } laye_token;
-
-laye_token* laye_token_alloc(laye_token_kind kind, layec_location location, string_view atom);
-void laye_token_dealloc(laye_token* token);
 
 #endif // TOKEN_H

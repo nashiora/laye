@@ -8,6 +8,11 @@
 #include "layec/compiler.h"
 #include "layec/diagnostic.h"
 
+void layec_context_init(layec_context* context)
+{
+    context->constantArena = arena_create(default_allocator, 10 * 1024);
+}
+
 layec_fileid layec_context_add_file(layec_context* context, string_view name, string source)
 {
     layec_fileid nextId = 1 + cast(layec_fileid) arrlenu(context->files);
@@ -102,8 +107,33 @@ string layec_intern_string_view(layec_context* context, string_view view)
     return newIntern;
 }
 
+EXT_FORMAT(4, 5)
+void layec_debugf(layec_context* context, const char* fmt, ...)
+{
+    assert(context != nullptr);
+    assert(fmt != nullptr);
+    va_list ap;
+    va_start(ap, fmt);
+    layec_vdebugf(context, fmt, ap);
+    va_end(ap);
+}
+
+void layec_vdebugf(layec_context* context, const char* fmt, va_list ap)
+{
+    assert(context != nullptr);
+    assert(fmt != nullptr);
+    if (context->verbose)
+    {
+        fprintf(stderr, ANSI_COLOR_BRIGHT_BLACK "DEBUG: ");
+        vfprintf(stderr, fmt, ap);
+        fprintf(stderr, ANSI_COLOR_RESET);
+    }
+}
+
 void layec_issue_diagnostic(layec_context* context, layec_diagnostic_severity severity, layec_location loc, const char* fmt, ...)
 {
+    assert(context != nullptr);
+    assert(fmt != nullptr);
     va_list ap;
     va_start(ap, fmt);
     layec_vissue_diagnostic(context, severity, loc, fmt, ap);
@@ -112,6 +142,8 @@ void layec_issue_diagnostic(layec_context* context, layec_diagnostic_severity se
     
 void layec_vissue_diagnostic(layec_context* context, layec_diagnostic_severity severity, layec_location loc, const char* fmt, va_list ap)
 {
+    assert(context != nullptr);
+    assert(fmt != nullptr);
     assert(severity >= 0 && severity < SEV_COUNT);
     if (severity >= SEV_ERROR) context->hasIssuedHighSeverityDiagnostic = true;
 

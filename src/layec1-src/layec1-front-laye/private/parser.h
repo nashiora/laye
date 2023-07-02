@@ -16,9 +16,10 @@ typedef struct laye_parse_result
 {
     laye_parse_result_status status;
     laye_ast ast;
+    arena_allocator* astArena;
 } laye_parse_result;
 
-list(laye_token*) laye_lex(layec_context* context, layec_fileid fileId);
+list(laye_token*) laye_lex(layec_context* context, layec_fileid fileId, arena_allocator* tokenArena);
 laye_parse_result laye_parse(layec_context* context, layec_fileid fileId);
 
 #endif // PARSER_H

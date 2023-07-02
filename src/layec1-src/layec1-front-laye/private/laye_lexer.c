@@ -2,21 +2,25 @@
 
 #include "layec/front/laye/front.h"
 
+#include "layec/compiler.h"
+
 #include "ast.h"
 #include "token.h"
 
-laye_token* laye_token_alloc(laye_token_kind kind, layec_location location, string_view atom)
+typedef struct laye_lexer
 {
-    laye_token* result = allocate(LAYE_TOKEN_ALLOCATOR, sizeof(laye_token));
-    result->kind = kind;
-    result->location = location;
-    result->atom = atom;
-    return result;
-}
+    layec_context* context;
+    layec_fileid fileId;
+    arena_allocator* tokenArena;
+    string sourceText;
+    rune currentRune;
+    usize currentPosition;
+} laye_lexer;
 
-void laye_token_dealloc(laye_token* token)
+static laye_token* laye_token_alloc(laye_lexer* l)
 {
-    deallocate(LAYE_TOKEN_ALLOCATOR, token);
+    laye_token* result = arena_push(l->tokenArena, sizeof(laye_token));
+    return result;
 }
 
 typedef struct keyword_info
@@ -36,15 +40,6 @@ LAYE_TOKEN_KINDS
 };
 
 #define LAYE_KEYWORD_COUNT (cast(size_t) (sizeof(keywords) / sizeof(keyword_info)))
-
-typedef struct laye_lexer
-{
-    layec_context* context;
-    layec_fileid fileId;
-    string sourceText;
-    rune currentRune;
-    usize currentPosition;
-} laye_lexer;
 
 static bool lexer_is_eof(laye_lexer* l)
 {
@@ -138,10 +133,11 @@ static laye_token* lexer_get_token(laye_lexer* l)
     if (lexer_is_eof(l))
         return NULL;
 
-    laye_token* token = calloc(1, sizeof(laye_token));
+    laye_token* token = laye_token_alloc(l);
     usize startPosition = l->currentPosition;
-        
+    
     rune c = lexer_current(l);
+    //layec_debugf(l->context, "processing char %d\n", cast(int) c);
     switch (c)
     {
         case 'A': case 'B': case 'C': case 'D': case 'E':
@@ -550,7 +546,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
             else lexer_advance(l);
 
             token->kind = LAYE_TOKEN_LITERAL_STRING;
-            token->stringValue = string_builder_to_string(&stringBuilder);
+            token->stringValue = string_builder_to_string_arena(&stringBuilder, l->context->constantArena);
             string_builder_deallocate(&stringBuilder);
         } break;
 
@@ -581,11 +577,12 @@ static laye_token* lexer_get_token(laye_lexer* l)
     return token;
 }
 
-list(laye_token*) laye_lex(layec_context* context, layec_fileid fileId)
+list(laye_token*) laye_lex(layec_context* context, layec_fileid fileId, arena_allocator* tokenArena)
 {
     laye_lexer lexer = { 0 };
     lexer.context = context;
     lexer.fileId = fileId;
+    lexer.tokenArena = tokenArena;
     lexer.sourceText = layec_context_get_file_source(context, fileId);
     
     utf8_decode_result firstRuneResult = utf8_decode_rune_at_string_position(lexer.sourceText, 0);

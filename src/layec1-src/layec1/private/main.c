@@ -122,6 +122,8 @@ int main(int argc, char** argv)
     if (args.verbose) debug_print_args(args);
 
     layec_context context = { 0 };
+    context.verbose = args.verbose;
+
     list(front_end_data*) frontEndsToInvoke = nullptr;
 
     for (usize i = 0; i < arrlenu(args.files); i++)

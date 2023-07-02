@@ -13,6 +13,9 @@ typedef struct laye_parser
     layec_context* context;
     layec_fileid fileId;
 
+    arena_allocator* tokenArena;
+    arena_allocator* astArena;
+
     laye_token** tokens;
     usize currentTokenIndex;
 } laye_parser;
@@ -38,21 +41,14 @@ static bool laye_parser_is_eof(laye_parser* p);
 static void laye_parser_advance(laye_parser* p);
 static laye_ast_node* laye_parse_top_level(laye_parser* p);
 
-laye_ast_node* laye_ast_node_alloc(laye_ast_node_kind kind, layec_location location)
+static laye_ast_node* laye_ast_node_alloc(laye_parser* p, laye_ast_node_kind kind, layec_location location)
 {
-    laye_ast_node* result = allocate(AST_ALLOCATOR, sizeof(laye_ast_node));
+    laye_ast_node* result = arena_push(p->astArena, sizeof(laye_ast_node));
     assert(result != nullptr);
     result->kind = kind;
     result->location = location;
     return result;
 }
-
-void laye_ast_node_dealloc(laye_ast_node* node)
-{
-    assert(node != nullptr);
-    deallocate(AST_ALLOCATOR, node);
-}
-
 
 static void laye_parser_read_file_headers(laye_parser *p, laye_ast* ast);
 
@@ -66,9 +62,11 @@ laye_parse_result laye_parse(layec_context* context, layec_fileid fileId)
     laye_parser parser = {
         .context = context,
         .fileId = fileId,
+        .tokenArena = arena_create(default_allocator, 10 * 1024),
+        .astArena = arena_create(default_allocator, 10 * 1024),
     };
 
-    parser.tokens = laye_lex(context, fileId);
+    parser.tokens = laye_lex(context, fileId, parser.tokenArena);
     if (parser.tokens == nullptr)
     {
         result.status = LAYE_PARSE_FAILURE;
@@ -98,6 +96,10 @@ laye_parse_result laye_parse(layec_context* context, layec_fileid fileId)
         }
     }
 
+    arena_destroy(parser.tokenArena);
+    parser.tokenArena = nullptr;
+
+    result.astArena = parser.astArena;
     return result;
 }
 
@@ -197,7 +199,12 @@ static void laye_parser_expect_out(laye_parser* p, laye_token_kind kind, const c
 
         if (outToken != nullptr)
         {
-            *outToken = laye_token_alloc(kind, endLocation, STRING_VIEW_LITERAL("<invalid>"));
+            laye_token* newToken = arena_push(p->tokenArena, sizeof(laye_token));
+            newToken->kind = kind;
+            newToken->location = endLocation;
+            newToken->atom = STRING_VIEW_LITERAL("<invalid>");
+
+            *outToken = newToken;
         }
 
         return;
@@ -217,7 +224,12 @@ static void laye_parser_expect_out(laye_parser* p, laye_token_kind kind, const c
         
         if (outToken != nullptr)
         {
-            *outToken = laye_token_alloc(kind, current->location, STRING_VIEW_LITERAL("<invalid>"));
+            laye_token* newToken = arena_push(p->tokenArena, sizeof(laye_token));
+            newToken->kind = kind;
+            newToken->location = current->location;
+            newToken->atom = STRING_VIEW_LITERAL("<invalid>");
+
+            *outToken = newToken;
         }
 
         return;
@@ -368,7 +380,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         {
             layec_location endLocation = laye_parser_eof_location(p);
             layec_issue_diagnostic(p->context, SEV_ERROR, endLocation, "Unexpected end of file reached when parsing a type.");
-            *outTypeSyntax = laye_ast_node_alloc(LAYE_AST_NODE_INVALID, endLocation);
+            *outTypeSyntax = laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, endLocation);
             return true;
         }
 
@@ -383,7 +395,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
     {
         case LAYE_TOKEN_IX:
         {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_INT_SIZED, current->location);
+            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INT_SIZED, current->location);
             sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
@@ -392,7 +404,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
 
         case LAYE_TOKEN_UX:
         {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_UINT_SIZED, current->location);
+            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_UINT_SIZED, current->location);
             sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
@@ -401,7 +413,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
 
         case LAYE_TOKEN_BX:
         {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_BOOL_SIZED, current->location);
+            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_BOOL_SIZED, current->location);
             sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
@@ -410,7 +422,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
 
         case LAYE_TOKEN_FX:
         {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_FLOAT_SIZED, current->location);
+            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FLOAT_SIZED, current->location);
             sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
             laye_parser_advance(p);
@@ -422,7 +434,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             if (issueDiagnostics)
             {
                 layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Identifier expected when parsing a type.");
-                *outTypeSyntax = laye_ast_node_alloc(LAYE_AST_NODE_INVALID, current->location);
+                *outTypeSyntax = laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, current->location);
                 laye_parser_advance(p);
                 return true;
             }
@@ -449,7 +461,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
     {
         layec_location endLocation = laye_parser_eof_location(p);
         layec_issue_diagnostic(p->context, SEV_ERROR, endLocation, "End of file reached when parsing primary expression.");
-        return laye_ast_node_alloc(LAYE_AST_NODE_INVALID, endLocation);
+        return laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, endLocation);
     }
 
     laye_token* current = laye_parser_current(p);
@@ -460,7 +472,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
         case LAYE_TOKEN_IDENTIFIER:
         {
             // TODO(local): a::x and a.x, here or in prefix parser
-            laye_ast_node* resultNode = laye_ast_node_alloc(LAYE_AST_NODE_EXPRESSION_LOOKUP, current->location);
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_LOOKUP, current->location);
             assert(resultNode != nullptr);
             resultNode->lookupName = layec_intern_string_view(p->context, current->atom);
             laye_parser_advance(p);
@@ -469,7 +481,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
 
         case LAYE_TOKEN_LITERAL_INTEGER:
         {
-            laye_ast_node* resultNode = laye_ast_node_alloc(LAYE_AST_NODE_EXPRESSION_INTEGER, current->location);
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_INTEGER, current->location);
             assert(resultNode != nullptr);
             resultNode->literal.integerValue = current->integerValue;
             laye_parser_advance(p);
@@ -479,7 +491,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
         default:
         {
             layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Unexpected token when parsing expression.");
-            return laye_ast_node_alloc(LAYE_AST_NODE_INVALID, current->location);
+            return laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, current->location);
         }
     }
 }
@@ -523,7 +535,7 @@ static laye_ast_node* laye_parse_grouped_statement(laye_parser* p)
 
     layec_location groupLocation = layec_location_combine(firstToken->location, lastToken->location);
 
-    laye_ast_node* groupedStatement = laye_ast_node_alloc(LAYE_AST_NODE_STATEMENT_BLOCK, groupLocation);
+    laye_ast_node* groupedStatement = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_BLOCK, groupLocation);
     groupedStatement->statements = body;
 
     return groupedStatement;
@@ -552,7 +564,7 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
 
             laye_parser_expect(p, ';', nullptr);
 
-            laye_ast_node* returnNode = laye_ast_node_alloc(LAYE_AST_NODE_STATEMENT_RETURN, returnLocation);
+            laye_ast_node* returnNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_RETURN, returnLocation);
             returnNode->returnValue = returnValue;
             return returnNode;
         }
@@ -569,7 +581,7 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
                 laye_ast_node* assignValue = laye_parse_expression(p);
                 assert(assignValue != nullptr);
 
-                laye_ast_node* assignNode = laye_ast_node_alloc(LAYE_AST_NODE_STATEMENT_ASSIGNMENT, layec_location_combine(statement->location, assignValue->location));
+                laye_ast_node* assignNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_ASSIGNMENT, layec_location_combine(statement->location, assignValue->location));
                 assignNode->assignment.target = statement;
                 assignNode->assignment.value = assignValue;
 
@@ -611,7 +623,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
                 paramNameToken = laye_parser_current(p);
                 laye_parser_advance(p);
 
-                paramTypeSyntax = laye_ast_node_alloc(LAYE_AST_NODE_TYPE_ERROR, paramNameToken->location);
+                paramTypeSyntax = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ERROR, paramNameToken->location);
 
                 layec_issue_diagnostic(p->context, SEV_ERROR, paramNameToken->location, "Parameter type missing.");
             }
@@ -629,7 +641,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
             assert(paramTypeSyntax != nullptr);
             assert(paramNameToken != nullptr);
             
-            paramBinding = laye_ast_node_alloc(LAYE_AST_NODE_BINDING_DECLARATION, layec_location_combine(paramTypeSyntax->location, paramNameToken->location));
+            paramBinding = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, layec_location_combine(paramTypeSyntax->location, paramNameToken->location));
             paramBinding->bindingDeclaration.declaredType = paramTypeSyntax;
             paramBinding->bindingDeclaration.name = layec_intern_string_view(p->context, paramNameToken->atom);
 
@@ -656,7 +668,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         }
         else laye_parser_expect(p, ';', nullptr);
 
-        laye_ast_node* functionDeclaration = laye_ast_node_alloc(LAYE_AST_NODE_FUNCTION_DECLARATION, name->location);
+        laye_ast_node* functionDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_FUNCTION_DECLARATION, name->location);
         functionDeclaration->functionDeclaration.modifiers = modifiers;
         functionDeclaration->functionDeclaration.returnType = declType;
         functionDeclaration->functionDeclaration.name = layec_intern_string_view(p->context, name->atom);
@@ -664,7 +676,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         return functionDeclaration;
     }
 
-    laye_ast_node* bindingDeclaration = laye_ast_node_alloc(LAYE_AST_NODE_BINDING_DECLARATION, name->location);
+    laye_ast_node* bindingDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, name->location);
     bindingDeclaration->bindingDeclaration.modifiers = modifiers;
     bindingDeclaration->bindingDeclaration.declaredType = declType;
     bindingDeclaration->bindingDeclaration.name = layec_intern_string_view(p->context, name->atom);

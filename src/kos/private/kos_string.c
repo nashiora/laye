@@ -193,15 +193,36 @@ void kos_string_builder_deallocate(kos_string_builder* sb)
     kos_deallocate(sb->allocator, cast(void*) sb->memory);
 }
 
-kos_string kos_string_builder_to_string(kos_string_builder* sb)
+kos_string kos_string_builder_to_string(kos_string_builder* sb, kos_allocator_function allocator)
 {
-    assert(sb->allocator);
+    if (allocator == nullptr)
+        allocator = sb->allocator;
+    assert(allocator);
+
     string result = { 0 };
-    result.allocator = sb->allocator;
+    result.allocator = allocator;
     result.count = sb->count;
+
     uchar* memory = kos_allocate(result.allocator, result.count + 1);
     memory[result.count] = 0; // doesn't hurt to nul terminate anyway
     memcpy(memory, sb->memory, result.count);
+
+    result.memory = memory;
+    return result;
+}
+
+kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_allocator* arena)
+{
+    assert(arena);
+
+    string result = { 0 };
+    result.allocator = nullptr;
+    result.count = sb->count;
+
+    uchar* memory = kos_arena_push(arena, result.count + 1);
+    memory[result.count] = 0; // doesn't hurt to nul terminate anyway
+    memcpy(memory, sb->memory, result.count);
+    
     result.memory = memory;
     return result;
 }
