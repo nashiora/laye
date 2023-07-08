@@ -47,6 +47,9 @@
 #  define string_builder_to_string(sb, allocator) kos_string_builder_to_string(sb, allocator)
 #  define string_builder_to_string_arena(sb, arena) kos_string_builder_to_string_arena(sb, arena)
 #  define string_builder_append_rune(sb, value) kos_string_builder_append_rune(sb, value)
+#  define string_builder_append_uint(sb, value) kos_string_builder_append_uint(sb, value)
+#  define string_builder_append_cstring(sb, s) kos_string_builder_append_cstring(sb, s)
+#  define string_builder_set_count(sb, count) kos_string_builder_set_count(sb, count)
 #endif // KOS_NO_SHORT_NAMES
 
 /* owning UTF-8 string. */
@@ -97,5 +100,8 @@ kos_string kos_string_builder_to_string(kos_string_builder* sb, kos_allocator_fu
 kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_allocator* arena);
 
 void kos_string_builder_append_rune(kos_string_builder* sb, rune value);
+void kos_string_builder_append_uint(kos_string_builder* sb, usize value);
+void kos_string_builder_append_cstring(kos_string_builder* sb, const char* s);
+void kos_string_builder_set_count(kos_string_builder* sb, usize count);
 
 #endif // KOS_STRING_H

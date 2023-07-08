@@ -1,6 +1,5 @@
-#include <stdio.h>
-
 #include "kos/kos.h"
+#include "kos/ansi.h"
 
 #include "layec/front/laye/front.h"
 
@@ -17,7 +16,7 @@ layec_front_end_status laye_front_end_entry(layec_context* context, list(layec_f
 
     list(laye_ast) asts = nullptr;
     list(arena_allocator*) astArenas = nullptr;
-    
+
     for (usize i = 0; i < arrlenu(inputFiles); i++)
     {
         laye_parse_result parseResult = laye_parse(context, inputFiles[i]);
@@ -31,6 +30,7 @@ layec_front_end_status laye_front_end_entry(layec_context* context, list(layec_f
     for (usize i = 0; i < arrlenu(asts); i++)
     {
         laye_ast ast = asts[i];
+        laye_ast_fprint(stderr, context, &ast, true);
     }
 
     // once we're done generating IR, destroy the AST memory arenas

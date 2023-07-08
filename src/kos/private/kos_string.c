@@ -146,7 +146,8 @@ bool kos_string_view_ends_with_constant(kos_string_view sv, const char* constant
 
 static void kos_string_builder_ensure_capacity(kos_string_builder* sb, usize minCapacity)
 {
-    assert(sb->allocator);
+    assert(sb->allocator != nullptr);
+    assert(sb->allocator != nullptr);
 
     if (sb->memory == nullptr)
     {
@@ -189,12 +190,13 @@ void kos_string_builder_init(kos_string_builder* sb, kos_allocator_function allo
 
 void kos_string_builder_deallocate(kos_string_builder* sb)
 {
-    assert(sb->allocator);
+    assert(sb->allocator != nullptr);
     kos_deallocate(sb->allocator, cast(void*) sb->memory);
 }
 
 kos_string kos_string_builder_to_string(kos_string_builder* sb, kos_allocator_function allocator)
 {
+    assert(sb != nullptr);
     if (allocator == nullptr)
         allocator = sb->allocator;
     assert(allocator);
@@ -213,7 +215,8 @@ kos_string kos_string_builder_to_string(kos_string_builder* sb, kos_allocator_fu
 
 kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_allocator* arena)
 {
-    assert(arena);
+    assert(sb != nullptr);
+    assert(arena != nullptr);
 
     string result = { 0 };
     result.allocator = nullptr;
@@ -227,8 +230,37 @@ kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_
     return result;
 }
 
+void kos_string_builder_append_uint(kos_string_builder* sb, usize value)
+{
+    assert(sb != nullptr);
+
+    usize valueCharLen = 0;
+    {
+        usize value2 = value;
+        while (value2 > 0)
+        {
+            valueCharLen++;
+            value2 /= 10;
+        }
+    }
+
+    kos_string_builder_ensure_capacity(sb, sb->count + valueCharLen);
+    sb->count += valueCharLen;
+    
+    usize index = 0;
+    while (value > 0)
+    {
+        int c = (value % 10) + '0';
+        sb->memory[sb->count - 1 - index] = cast(uchar) c;
+
+        index++;
+        value /= 10;
+    }
+}
+
 void kos_string_builder_append_rune(kos_string_builder* sb, rune value)
 {
+    assert(sb != nullptr);
     int runeByteCount = kos_utf8_calc_rune_required_byte_count(value);
     kos_string_builder_ensure_capacity(sb, sb->count + runeByteCount);
 
@@ -243,4 +275,24 @@ void kos_string_builder_append_rune(kos_string_builder* sb, rune value)
 
     runeStart[0] = '?';
     sb->count++;
+}
+
+void kos_string_builder_append_cstring(kos_string_builder* sb, const char* s)
+{
+    assert(sb != nullptr);
+    if (s == nullptr)
+        return;
+
+    usize sLen = strlen(s);
+    kos_string_builder_ensure_capacity(sb, sb->count + sLen);
+
+    memcpy(sb->memory + sb->count, s, sLen);
+    sb->count += sLen;
+}
+
+void kos_string_builder_set_count(kos_string_builder* sb, usize count)
+{
+    assert(sb != nullptr);
+    if (count <= sb->capacity)
+        sb->count = count;
 }

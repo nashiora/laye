@@ -4,3 +4,8 @@ i32 main()
     retval = 69;
     return retval;
 }
+
+i32 nice()
+{
+    return 69;
+}

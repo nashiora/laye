@@ -672,6 +672,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         functionDeclaration->functionDeclaration.modifiers = modifiers;
         functionDeclaration->functionDeclaration.returnType = declType;
         functionDeclaration->functionDeclaration.name = layec_intern_string_view(p->context, name->atom);
+        functionDeclaration->functionDeclaration.body = functionBody;
 
         return functionDeclaration;
     }

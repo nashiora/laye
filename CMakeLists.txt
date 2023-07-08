@@ -38,6 +38,7 @@ add_executable(layec1
   "src/layec1-src/layec1-lib/private/compiler.c"
   "src/layec1-src/layec1-lib/private/diagnostic.c"
 
+  "src/layec1-src/layec1-front-laye/private/laye_ast.c"
   "src/layec1-src/layec1-front-laye/private/laye_front.c"
   "src/layec1-src/layec1-front-laye/private/laye_lexer.c"
   "src/layec1-src/layec1-front-laye/private/laye_parser.c"

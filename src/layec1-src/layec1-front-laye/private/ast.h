@@ -1,6 +1,8 @@
 #ifndef AST_H
 #define AST_H
 
+#include <stdio.h>
+
 #include "kos/kos.h"
 
 #include "token.h"
@@ -215,5 +217,10 @@ typedef struct laye_ast
     list(laye_ast_import) imports;
     list(laye_ast_node*) topLevelNodes;
 } laye_ast;
+
+string laye_ast_node_type_to_string(laye_ast_node* typeNode);
+
+string_view laye_ast_node_kind_name(laye_ast_node_kind kind);
+void laye_ast_fprint(FILE* stream, layec_context* context, laye_ast* ast, bool colors);
 
 #endif // AST_H
