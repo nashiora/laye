@@ -18,13 +18,13 @@ endif()
 
 set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
 
-# ==================== layec1 Project ====================
-project(layec1
+# ==================== clayec Project ====================
+project(clayec
   VERSION 0.1.0
   LANGUAGES C
 )
 
-add_executable(layec1
+add_executable(clayec
   "src/kos/private/kos_allocator.c"
   "src/kos/private/kos_args.c"
   "src/kos/private/kos_builtins.c"
@@ -33,26 +33,26 @@ add_executable(layec1
   "src/kos/private/kos_string.c"
   "src/kos/private/kos_utf8.c"
 
-  "src/layec1-src/layec1/private/main.c"
+  "src/clayec-src/clayec/private/main.c"
 
-  "src/layec1-src/layec1-lib/private/compiler.c"
-  "src/layec1-src/layec1-lib/private/diagnostic.c"
+  "src/clayec-src/clayec-lib/private/compiler.c"
+  "src/clayec-src/clayec-lib/private/diagnostic.c"
 
-  "src/layec1-src/layec1-front-laye/private/laye_ast.c"
-  "src/layec1-src/layec1-front-laye/private/laye_front.c"
-  "src/layec1-src/layec1-front-laye/private/laye_lexer.c"
-  "src/layec1-src/layec1-front-laye/private/laye_parser.c"
+  "src/clayec-src/clayec-front-laye/private/laye_ast.c"
+  "src/clayec-src/clayec-front-laye/private/laye_front.c"
+  "src/clayec-src/clayec-front-laye/private/laye_lexer.c"
+  "src/clayec-src/clayec-front-laye/private/laye_parser.c"
 )
 
-set_property(TARGET layec1 PROPERTY C_STANDARD 99)
-target_include_directories(layec1 PUBLIC
+set_property(TARGET clayec PROPERTY C_STANDARD 99)
+target_include_directories(clayec PUBLIC
   "./src/kos/public"
-  "./src/layec1-src/layec1/public"
-  "./src/layec1-src/layec1-lib/public"
-  "./src/layec1-src/layec1-front-laye/public"
+  "./src/clayec-src/clayec/public"
+  "./src/clayec-src/clayec-lib/public"
+  "./src/clayec-src/clayec-front-laye/public"
 )
 
 if (NOT WIN32)
-  target_link_libraries(layec1 PRIVATE m)
+  target_link_libraries(clayec PRIVATE m)
 endif()
 # ==================== layec Project ====================
