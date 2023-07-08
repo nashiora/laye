@@ -618,7 +618,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
 
             laye_ast_node* paramBinding = nullptr;
 
-            if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER) && laye_parser_peek_check(p, ','))
+            if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER) && (laye_parser_peek_check(p, ',') || laye_parser_peek_check(p, ')')))
             {
                 paramNameToken = laye_parser_current(p);
                 laye_parser_advance(p);
@@ -635,7 +635,6 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
                 assert(typeParseResult == true);
 
                 paramNameToken = laye_parser_expect_identifier(p, nullptr);
-                laye_parser_advance(p);
             }
             
             assert(paramTypeSyntax != nullptr);
@@ -672,6 +671,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         functionDeclaration->functionDeclaration.modifiers = modifiers;
         functionDeclaration->functionDeclaration.returnType = declType;
         functionDeclaration->functionDeclaration.name = layec_intern_string_view(p->context, name->atom);
+        functionDeclaration->functionDeclaration.parameterBindings = parameterBindingNodes;
         functionDeclaration->functionDeclaration.body = functionBody;
 
         return functionDeclaration;
