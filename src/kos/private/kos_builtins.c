@@ -30,7 +30,7 @@ noreturn void kos_raise_fatal_error(
     const char* fileName = file;
 
     const char* srcPrefix;
-    while (srcPrefix = mystrstr(fileName, "src" KOS_PLATFORM_PATH_SEPARATOR))
+    while ((srcPrefix = mystrstr(fileName, "src" KOS_PLATFORM_PATH_SEPARATOR)))
         fileName = srcPrefix + 4;
 
     const char* const color = isSorry ? ANSI_COLOR_BRIGHT_CYAN : ANSI_COLOR_BRIGHT_RED;

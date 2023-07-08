@@ -24,7 +24,7 @@ kos_string kos_string_create(kos_allocator_function allocator, const uchar* memo
     };
 }
 
-kos_string kos_string_deallocate(kos_string s)
+void kos_string_deallocate(kos_string s)
 {
     assert(s.allocator);
     kos_deallocate(s.allocator, cast(void*) s.memory);

@@ -1,7 +1,7 @@
 i32 main(i32 argc)
 {
     i32 retval = 42;
-    retval = 69;
+    retval = nice();
     return retval;
 }
 

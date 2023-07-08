@@ -24,6 +24,6 @@ typedef enum kos_platform_read_file_status
     KOS_PLATFORM_READ_FILE_FAILED,
 } kos_platform_read_file_status;
 
-kos_string kos_platform_read_file(const uchar* path, kos_allocator_function allocator, kos_platform_read_file_status* status);
+kos_string kos_platform_read_file(const char* path, kos_allocator_function allocator, kos_platform_read_file_status* status);
 
 #endif // PLATFORM_H

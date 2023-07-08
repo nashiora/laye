@@ -208,6 +208,12 @@ struct laye_ast_node
             u64 integerValue;
             string stringValue;
         } literal;
+        
+        union
+        {
+            laye_ast_node* target;
+            list(laye_ast_node*) arguments;
+        } invoke;
     };
 };
 

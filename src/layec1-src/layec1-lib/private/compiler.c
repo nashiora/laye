@@ -100,7 +100,7 @@ string layec_intern_string_view(layec_context* context, string_view view)
 
     string newIntern = (string){
         .allocator = default_allocator,
-        .memory = (const char*)memory,
+        .memory = cast(const uchar*) memory,
         .count = view.count,
     };
 

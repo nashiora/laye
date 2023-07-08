@@ -27,7 +27,7 @@ void* kos_default_allocator(kos_allocator_action action, void* memory, usize cou
     {
         case KOS_ALLOC_ALLOCATE: return malloc(count);
         case KOS_ALLOC_REALLOCATE: return realloc(memory, count);
-        case KOS_ALLOC_DEALLOCATE: free(memory); break;
+        case KOS_ALLOC_DEALLOCATE: free(memory); return nullptr;
         default: unreachable;
     }
 }

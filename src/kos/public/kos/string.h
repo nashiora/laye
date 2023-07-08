@@ -5,11 +5,11 @@
 #include "kos/primitives.h"
 
 #define KOS_STRING_EMPTY ((kos_string){ 0 })
-#define KOS_STRING_LITERAL(L) ((kos_string){ nullptr, L, (usize)((sizeof L) - 1) })
+#define KOS_STRING_LITERAL(L) ((kos_string){ nullptr, cast(const uchar*) (L), (usize)((sizeof L) - 1) })
 #define KOS_STRING_FORMAT "%.*s"
 #define KOS_STRING_EXPAND(S) (cast(int) (S).count), (cast(const char*) (S).memory)
 #define KOS_STRING_VIEW_EMPTY ((kos_string_view){ 0 })
-#define KOS_STRING_VIEW_LITERAL(L) ((kos_string_view){ L, (usize)((sizeof L) - 1) })
+#define KOS_STRING_VIEW_LITERAL(L) ((kos_string_view){ cast(const uchar*) (L), (usize)((sizeof L) - 1) })
 #define KOS_STRING_VIEW_FORMAT "%.*s"
 #define KOS_STRING_VIEW_EXPAND(S) (cast(int) (S).count), (cast(const char*) (S).memory)
 
@@ -80,7 +80,7 @@ typedef struct kos_string_builder
 
 kos_string kos_string_allocate(kos_allocator_function allocator, usize count);
 kos_string kos_string_create(kos_allocator_function allocator, const uchar* memory, usize count);
-kos_string kos_string_deallocate(kos_string s);
+void kos_string_deallocate(kos_string s);
 const char* kos_string_to_cstring(kos_string s, kos_allocator_function allocator);
 isize kos_string_index_of_uchar(kos_string s, uchar uc);
 

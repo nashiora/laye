@@ -7,7 +7,7 @@
 #include "kos/string.h"
 
 // TODO(local): kos_platform_read_file is actually just libc calls right now
-kos_string kos_platform_read_file(const uchar* path, kos_allocator_function allocator, kos_platform_read_file_status* status)
+kos_string kos_platform_read_file(const char* path, kos_allocator_function allocator, kos_platform_read_file_status* status)
 {
     if (path == nullptr)
     {

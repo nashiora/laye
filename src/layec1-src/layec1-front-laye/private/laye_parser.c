@@ -145,6 +145,17 @@ static layec_location laye_parser_eof_location(laye_parser* p)
     return (layec_location){ .fileId = p->fileId, .offset = fileSource.count, .length = 0 };
 }
 
+static layec_location laye_parser_most_recent_location(laye_parser* p)
+{
+    if (laye_parser_is_eof(p))
+        return laye_parser_eof_location(p);
+    
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+
+    return current->location;
+}
+
 static bool laye_parser_check(laye_parser* p, laye_token_kind kind)
 {
     assert(p != nullptr);
@@ -168,7 +179,7 @@ static bool laye_parser_check_conditional_keyword(laye_parser* p, const char* ke
         return false;
     }
 
-    return 0 == strncmp(keyword, current->atom.memory, current->atom.count);
+    return 0 == strncmp(keyword, cast(const char*) current->atom.memory, current->atom.count);
 }
 
 static bool laye_parser_peek_check(laye_parser* p, laye_token_kind kind)
@@ -449,6 +460,34 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
 {
     assert(p != nullptr);
     assert(expression != nullptr);
+
+    if (laye_parser_is_eof(p))
+        return expression;
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+
+    switch (current->kind)
+    {
+        default: break;
+
+        case '(':
+        {
+            laye_parser_advance(p);
+
+            list(laye_ast_node*) argumentNodes = nullptr;
+
+            laye_parser_expect(p, ')', nullptr);
+
+            layec_location location = layec_location_combine(expression->location, laye_parser_most_recent_location(p));
+
+            laye_ast_node* invokeExpression = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_INVOKE, expression->location);
+            invokeExpression->invoke.target = expression;
+            invokeExpression->invoke.arguments = argumentNodes;
+
+            return laye_parse_primary_suffix(p, invokeExpression);
+        } break;
+    }
 
     return expression;
 }

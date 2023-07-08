@@ -16,7 +16,7 @@ else()
   set(C_WARNING_FLAGS "")
 endif()
 
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${C_WARNING_FLAGS} -lm")
+set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
 
 # ==================== layec1 Project ====================
 project(layec1

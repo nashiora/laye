@@ -105,12 +105,12 @@ kos_utf8_decode_result kos_utf8_decode_rune(const char* data, usize offset, usiz
 
 kos_utf8_decode_result kos_utf8_decode_rune_at_string_position(kos_string s, usize position)
 {
-    return kos_utf8_decode_rune(s.memory, position, s.count);
+    return kos_utf8_decode_rune(cast(const char*) s.memory, position, s.count);
 }
 
 kos_utf8_decode_result kos_utf8_decode_rune_at_string_view_position(kos_string_view sv, usize position)
 {
-    return kos_utf8_decode_rune(sv.memory, position, sv.count);
+    return kos_utf8_decode_rune(cast(const char*) sv.memory, position, sv.count);
 }
 
 kos_utf8_encode_result kos_utf8_encode_rune(char* dest, usize destLength, rune value)
