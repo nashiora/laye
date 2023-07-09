@@ -366,6 +366,10 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, laye_ast_node** ty
     // TODO(local): how will we free syntax nodes?
     switch (current->kind)
     {
+        case '*':
+        {
+        } break;
+
         default: break;
     }
 
@@ -400,278 +404,66 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         return false;
     }
 
+    laye_ast_type_access access = LAYE_AST_ACCESS_NONE;
+    if (laye_parser_check(p, LAYE_TOKEN_READONLY))
+    {
+        laye_parser_advance(p);
+        access = LAYE_AST_ACCESS_READONLY;
+    }
+    else if (laye_parser_check(p, LAYE_TOKEN_WRITEONLY))
+    {
+        laye_parser_advance(p);
+        access = LAYE_AST_ACCESS_WRITEONLY;
+    }
+
     laye_token* current = laye_parser_current(p);
     assert(current != nullptr);
 
+    #define WORD_TYPE(TK, TY, SX) \
+        case LAYE_TOKEN_ ## TK: \
+        { \
+            laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ ## TY, current->location); \
+            if (SX) type->primitiveType.size = current->sizeParameter; \
+            *outTypeSyntax = type; \
+            laye_parser_advance(p); \
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics); \
+        }
+
     switch (current->kind)
     {
-        case LAYE_TOKEN_IDENTIFIER:
-        {
-            laye_ast_node* namedType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NAMED, current->location);
-            *outTypeSyntax = namedType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_VAR:
-        {
-            laye_ast_node* varType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INFER, current->location);
-            *outTypeSyntax = varType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_NORETURN:
-        {
-            laye_ast_node* noreturnType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NORETURN, current->location);
-            *outTypeSyntax = noreturnType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_RAWPTR:
-        {
-            laye_ast_node* rawptrType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_RAWPTR, current->location);
-            *outTypeSyntax = rawptrType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_VOID:
-        {
-            laye_ast_node* voidType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_VOID, current->location);
-            *outTypeSyntax = voidType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_STRING:
-        {
-            laye_ast_node* stringType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_STRING, current->location);
-            *outTypeSyntax = stringType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_RUNE:
-        {
-            laye_ast_node* runeType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_RUNE, current->location);
-            *outTypeSyntax = runeType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_INT:
-        {
-            laye_ast_node* intType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INT, current->location);
-            *outTypeSyntax = intType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_UINT:
-        {
-            laye_ast_node* uintType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_UINT, current->location);
-            *outTypeSyntax = uintType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_BOOL:
-        {
-            laye_ast_node* boolType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_BOOL, current->location);
-            *outTypeSyntax = boolType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-        
-        case LAYE_TOKEN_FLOAT:
-        {
-            laye_ast_node* floatType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FLOAT, current->location);
-            *outTypeSyntax = floatType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_IX:
-        {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INT_SIZED, current->location);
-            sizedIntType->primitiveType.size = current->sizeParameter;
-            *outTypeSyntax = sizedIntType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_UX:
-        {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_UINT_SIZED, current->location);
-            sizedIntType->primitiveType.size = current->sizeParameter;
-            *outTypeSyntax = sizedIntType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_BX:
-        {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_BOOL_SIZED, current->location);
-            sizedIntType->primitiveType.size = current->sizeParameter;
-            *outTypeSyntax = sizedIntType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_FX:
-        {
-            laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FLOAT_SIZED, current->location);
-            sizedIntType->primitiveType.size = current->sizeParameter;
-            *outTypeSyntax = sizedIntType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_CHAR:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_CHAR, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_SCHAR:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_SCHAR, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_UCHAR:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_UCHAR, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_STRING:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_STRING, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_SHORT:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_SHORT, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_USHORT:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_USHORT, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_INT:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_INT, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_UINT:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_UINT, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_LONG:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_LONG, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_ULONG:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_ULONG, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_LONGLONG:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_LONGLONG, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_ULONGLONG:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_ULONGLONG, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_SIZE_T:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_SIZE_T, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_PTRDIFF_T:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_PTRDIFF_T, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_FLOAT:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_FLOAT, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_DOUBLE:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_DOUBLE, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_LONGDOUBLE:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_LONGDOUBLE, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
-
-        case LAYE_TOKEN_C_BOOL:
-        {
-            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_BOOL, current->location);
-            *outTypeSyntax = cType;
-            laye_parser_advance(p);
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
-        }
+        WORD_TYPE(IDENTIFIER, NAMED, false)
+        WORD_TYPE(VAR, INFER, false)
+        WORD_TYPE(NORETURN, NORETURN, false)
+        WORD_TYPE(RAWPTR, RAWPTR, false)
+        WORD_TYPE(VOID, VOID, false)
+        WORD_TYPE(STRING, STRING, false)
+        WORD_TYPE(RUNE, RUNE, false)
+        WORD_TYPE(INT, INT, false)
+        WORD_TYPE(UINT, UINT, false)
+        WORD_TYPE(BOOL, BOOL, false)
+        WORD_TYPE(FLOAT, FLOAT, false)
+        WORD_TYPE(IX, INT_SIZED, true)
+        WORD_TYPE(UX, UINT_SIZED, true)
+        WORD_TYPE(BX, BOOL_SIZED, true)
+        WORD_TYPE(FX, FLOAT_SIZED, true)
+        WORD_TYPE(C_CHAR, C_CHAR, false)
+        WORD_TYPE(C_SCHAR, C_SCHAR, false)
+        WORD_TYPE(C_UCHAR, C_UCHAR, false)
+        WORD_TYPE(C_STRING, C_STRING, false)
+        WORD_TYPE(C_SHORT, C_SHORT, false)
+        WORD_TYPE(C_USHORT, C_USHORT, false)
+        WORD_TYPE(C_INT, C_INT, false)
+        WORD_TYPE(C_UINT, C_UINT, false)
+        WORD_TYPE(C_LONG, C_LONG, false)
+        WORD_TYPE(C_ULONG, C_ULONG, false)
+        WORD_TYPE(C_LONGLONG, C_LONGLONG, false)
+        WORD_TYPE(C_ULONGLONG, C_ULONGLONG, false)
+        WORD_TYPE(C_SIZE_T, C_SIZE_T, false)
+        WORD_TYPE(C_PTRDIFF_T, C_PTRDIFF_T, false)
+        WORD_TYPE(C_FLOAT, C_FLOAT, false)
+        WORD_TYPE(C_DOUBLE, C_DOUBLE, false)
+        WORD_TYPE(C_LONGDOUBLE, C_LONGDOUBLE, false)
+        WORD_TYPE(C_BOOL, C_BOOL, false)
 
         default:
         {

@@ -57,6 +57,8 @@
     K(IMPORT, "import") \
     K(EXPORT, "export") \
     K(OPERATOR, "operator") \
+    K(READONLY, "readonly") \
+    K(WRITEONLY, "writeonly") \
     K(VOID, "void") \
     K(VAR, "var") \
     K(NORETURN, "noreturn") \
