@@ -85,7 +85,6 @@
     A(EXPRESSION_FALSE) \
     A(EXPRESSION_STRING) \
     A(EXPRESSION_INTEGER) \
-    T(NAMED) \
     LAYE_AST_TYPE_KINDS
 
 typedef enum laye_ast_node_kind

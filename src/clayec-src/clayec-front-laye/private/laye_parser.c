@@ -423,6 +423,10 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         case LAYE_TOKEN_ ## TK: \
         { \
             laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ ## TY, current->location); \
+            if (access != LAYE_AST_ACCESS_NONE && LAYE_TOKEN_ ## TK != LAYE_TOKEN_STRING && LAYE_TOKEN_ ## TK != LAYE_TOKEN_C_STRING) \
+            { \
+                layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type '"STRING_VIEW_FORMAT"' cannot be readonly/writeonly.", STRING_VIEW_EXPAND(current->atom)); \
+            } else type->primitiveType.access = access; \
             if (SX) type->primitiveType.size = current->sizeParameter; \
             *outTypeSyntax = type; \
             laye_parser_advance(p); \
@@ -789,7 +793,6 @@ static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
                 laye_parser_advance(p); \
             } break
             MODIFIER_CASE(LAYE_TOKEN_EXPORT, LAYE_AST_MODIFIER_EXPORT);
-            MODIFIER_CASE(LAYE_TOKEN_NORETURN, LAYE_AST_MODIFIER_NORETURN);
             MODIFIER_CASE(LAYE_TOKEN_INLINE, LAYE_AST_MODIFIER_INLINE);
 #undef MODIFIER_CASE
 

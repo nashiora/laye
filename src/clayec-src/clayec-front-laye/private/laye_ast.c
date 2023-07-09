@@ -12,10 +12,16 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
     {
         default: string_builder_append_cstring(sb, "<unknown ast type>"); break;
         
+        case LAYE_AST_NODE_TYPE_NORETURN: string_builder_append_cstring(sb, "noreturn"); break;
         case LAYE_AST_NODE_TYPE_RAWPTR: string_builder_append_cstring(sb, "rawptr"); break;
         case LAYE_AST_NODE_TYPE_VOID: string_builder_append_cstring(sb, "void"); break;
-        case LAYE_AST_NODE_TYPE_STRING: string_builder_append_cstring(sb, "string"); break;
-        case LAYE_AST_NODE_TYPE_CSTRING: string_builder_append_cstring(sb, "cstring"); break;
+        case LAYE_AST_NODE_TYPE_STRING:
+            if (typeNode->primitiveType.access == LAYE_AST_ACCESS_READONLY)
+                string_builder_append_cstring(sb, "readonly ");
+            else if (typeNode->primitiveType.access == LAYE_AST_ACCESS_WRITEONLY)
+                string_builder_append_cstring(sb, "writeonly ");
+            string_builder_append_cstring(sb, "string");
+            break;
         case LAYE_AST_NODE_TYPE_RUNE: string_builder_append_cstring(sb, "rune"); break;
         case LAYE_AST_NODE_TYPE_BOOL: string_builder_append_cstring(sb, "bool"); break;
         case LAYE_AST_NODE_TYPE_INT: string_builder_append_cstring(sb, "int"); break;
@@ -40,6 +46,14 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
         case LAYE_AST_NODE_TYPE_FLOAT_SIZED:
             string_builder_append_cstring(sb, "f");
             string_builder_append_uint(sb, typeNode->primitiveType.size);
+            break;
+
+        case LAYE_AST_NODE_TYPE_C_STRING:
+            if (typeNode->primitiveType.access == LAYE_AST_ACCESS_READONLY)
+                string_builder_append_cstring(sb, "readonly ");
+            else if (typeNode->primitiveType.access == LAYE_AST_ACCESS_WRITEONLY)
+                string_builder_append_cstring(sb, "writeonly ");
+            string_builder_append_cstring(sb, "c_string");
             break;
     }
 }
@@ -89,11 +103,11 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
 {
     if (state.indents->count > 0)
     {
-        fprintf(state.stream, "%.*s", (int)state.indents->count, (const char*)state.indents->memory);
+        fprintf(state.stream, "%.*s", (int)state.indents->count, cast(const char*)state.indents->memory);
     }
 
-    const char* currentIndent = isLast ? "└─ " : "├─ ";
-    const char* nestedIndent = isLast ? "   " : "│  ";
+    const char* currentIndent = isLast ? "└ " : "├ ";
+    const char* nestedIndent = isLast ? "  " : "│ ";
 
     fprintf(state.stream, "%s", currentIndent);
     PUTCOLOR(ANSI_COLOR_RED);
@@ -150,7 +164,7 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
 
                 laye_ast_node* parameterBinding = node->functionDeclaration.parameterBindings[i];
 
-                string paramTypeString = laye_ast_node_type_to_string(node->functionDeclaration.returnType);
+                string paramTypeString = laye_ast_node_type_to_string(parameterBinding->bindingDeclaration.declaredType);
                 fprintf(state.stream, STRING_FORMAT" "STRING_FORMAT, STRING_EXPAND(paramTypeString), STRING_EXPAND(parameterBinding->bindingDeclaration.name));
                 string_deallocate(paramTypeString);
             }
