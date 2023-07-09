@@ -1,9 +1,5 @@
 import "numbers.laye";
 
-c_int main(c_int argc, readonly c_string[*] argv)
-{
-}
-
 void main(readonly string[] argv)
 {
 }
