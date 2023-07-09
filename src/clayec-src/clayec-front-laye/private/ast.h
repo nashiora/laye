@@ -12,10 +12,7 @@
 #define LAYE_AST_TYPE_KINDS \
     T(ERROR) \
     T(INFER) \
-    T(STRUCT) \
-    T(ENUM) \
-    T(UNION) \
-    T(FUNCTION) \
+    T(NAMED) \
     T(ARRAY) \
     T(SLICE) \
     T(POINTER) \

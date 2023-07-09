@@ -405,6 +405,14 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
 
     switch (current->kind)
     {
+        case LAYE_TOKEN_IDENTIFIER:
+        {
+            laye_ast_node* namedType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NAMED, current->location);
+            *outTypeSyntax = namedType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
         case LAYE_TOKEN_VAR:
         {
             laye_ast_node* varType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INFER, current->location);
