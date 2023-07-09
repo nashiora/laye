@@ -11,6 +11,7 @@
 void layec_context_init(layec_context* context)
 {
     context->constantArena = arena_create(default_allocator, 10 * 1024);
+    assert(context->constantArena != nullptr);
 }
 
 layec_fileid layec_context_add_file(layec_context* context, string_view name, string source)

@@ -216,7 +216,7 @@ kos_string kos_string_builder_to_string(kos_string_builder* sb, kos_allocator_fu
 kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_allocator* arena)
 {
     assert(sb != nullptr);
-    assert(arena != nullptr);
+    assert(arena != nullptr && "kos_string_builder_to_string_arena got nullptr arena");
 
     string result = { 0 };
     result.allocator = nullptr;

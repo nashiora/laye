@@ -1,11 +1,8 @@
+import "numbers.laye";
+
 i32 main(i32 argc)
 {
     i32 retval = 42;
     retval = nice();
     return retval;
-}
-
-i32 nice()
-{
-    return 69;
 }

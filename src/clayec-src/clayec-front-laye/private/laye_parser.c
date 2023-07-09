@@ -293,8 +293,8 @@ static laye_ast_import laye_parse_import_declaration(laye_parser* p, bool export
         laye_token* stringToken = nullptr;
         laye_parser_expect_out(p, LAYE_TOKEN_LITERAL_STRING, "String literal expected as import library or file name.", &stringToken);
         assert(stringToken != nullptr);
-        assert(stringToken->atom.count > 0);
-        result.name = layec_intern_string_view(p->context, stringToken->atom);
+        assert(stringToken->stringValue.count > 0);
+        result.name = layec_intern_string_view(p->context, string_slice(stringToken->stringValue, 0, stringToken->stringValue.count));
     }
 
     if (laye_parser_check_conditional_keyword(p, "as"))

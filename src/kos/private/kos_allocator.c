@@ -104,7 +104,7 @@ void kos_arena_clear(kos_arena_allocator* arena)
 
 void* kos_arena_push(kos_arena_allocator* arena, usize count)
 {
-    assert(arena != nullptr);
+    assert(arena != nullptr && "kos_arena_push got nullptr arena");
 
     if (count > arena->blockSize)
     {
@@ -123,5 +123,6 @@ void* kos_arena_push(kos_arena_allocator* arena, usize count)
     void* data = cast(char*) currentBlock->data + currentBlock->allocated;
     currentBlock->allocated += count;
 
+    memset(data, 0, count);
     return data;
 }

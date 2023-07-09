@@ -134,6 +134,8 @@ static laye_token* lexer_get_token(laye_lexer* l)
         return NULL;
 
     laye_token* token = laye_token_alloc(l);
+    assert(token->location.fileId == 0, "after allocating token");
+
     usize startPosition = l->currentPosition;
     
     rune c = lexer_current(l);
@@ -509,6 +511,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
 
         case '"':
         {
+            assert(token->location.fileId == 0, "at start of string literal");
             lexer_advance(l);
 
             string_builder stringBuilder = { 0 };
@@ -548,6 +551,8 @@ static laye_token* lexer_get_token(laye_lexer* l)
             token->kind = LAYE_TOKEN_LITERAL_STRING;
             token->stringValue = string_builder_to_string_arena(&stringBuilder, l->context->constantArena);
             string_builder_deallocate(&stringBuilder);
+
+            assert(token->location.fileId == 0, "at end of string literal");
         } break;
 
         default:
@@ -563,6 +568,10 @@ static laye_token* lexer_get_token(laye_lexer* l)
     
     if (token->location.fileId == 0)
         token->location = lexer_location(l, startPosition);
+    assert(token->location.length > 0, "at start position %zu", startPosition);
+    assert(token->location.offset < l->sourceText.count, "at start position %zu", startPosition);
+    assert(token->location.length <= l->sourceText.count, "at start position %zu", startPosition);
+    assert(token->location.offset + token->location.length <= l->sourceText.count, "at start position %zu", startPosition);
     
     lexer_skip_whitespace(l);
 
@@ -573,7 +582,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
     if (token->atom.memory == nullptr)
         token->atom = layec_view_from_location(l->context, token->location);
 
-    assert(token->atom.count != 0);
+    assert(token->atom.count > 0, "%zu:%zu", token->location.offset, token->location.length);
     return token;
 }
 

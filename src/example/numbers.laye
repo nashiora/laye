@@ -1,0 +1,4 @@
+export i32 get_nice_number()
+{
+    return 69;
+}

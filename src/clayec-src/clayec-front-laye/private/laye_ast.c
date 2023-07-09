@@ -239,14 +239,84 @@ void laye_ast_fprint(FILE* stream, layec_context* context, laye_ast* ast, bool c
     string_view fileName = layec_context_get_file_name(context, ast->fileId);
 
     PUTCOLOR(ANSI_COLOR_RED);
-    fprintf(stream, "Root");
+    fprintf(stream, "ROOT");
     PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
     fprintf(stream, " "STRING_VIEW_FORMAT, STRING_VIEW_EXPAND(fileName));
     RESETCOLOR;
     fprintf(stream, "\n");
 
-    for (usize i = 0, len = arrlenu(ast->topLevelNodes); i < len; i++)
-        laye_ast_fprint_node(state, ast->topLevelNodes[i], i == len - 1);
+    usize importCount = arrlenu(ast->imports);
+    usize topLevelNodeCount = arrlenu(ast->topLevelNodes);
+
+    for (usize i = 0; i < importCount; i++)
+    {
+        laye_ast_import import = ast->imports[i];
+        bool isLast = i == importCount - 1 && topLevelNodeCount == 0;
+        fprintf(state.stream, "%s", isLast ? "└─ " : "├─ ");
+        PUTCOLOR(ANSI_COLOR_RED);
+        fprintf(stream, "IMPORT");
+        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+        fprintf(state.stream, " <");
+        PUTCOLOR(ANSI_COLOR_BLUE);
+        fprintf(state.stream, "Name: ");
+        RESETCOLOR;
+        fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(import.name));
+        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+        fprintf(state.stream, ">");
+        
+        if (import.alias.count > 0)
+        {
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Alias: ");
+            RESETCOLOR;
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(import.alias));
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        }
+        
+        if (import.export)
+        {
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Export");
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        }
+
+        if (import.allMembers)
+        {
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Captures All");
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        }
+        else if (arrlenu(import.explicitMembers) > 0)
+        {
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Captures: ");
+            RESETCOLOR;
+            for (usize j = 0, jLen = arrlenu(import.explicitMembers); j < jLen; j++)
+            {
+                if (j > 0)
+                    fprintf(state.stream, ", ");
+                string memberName = import.explicitMembers[i];
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(memberName));
+            }
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        }
+
+        RESETCOLOR;
+        fprintf(state.stream, "\n");
+    }
+
+    for (usize i = 0; i < topLevelNodeCount; i++)
+    {
+        laye_ast_fprint_node(state, ast->topLevelNodes[i], i == topLevelNodeCount - 1);
+    }
 
     string_builder_deallocate(state.indents);
 }
