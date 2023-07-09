@@ -340,7 +340,7 @@ void laye_ast_fprint(FILE* stream, layec_context* context, laye_ast* ast, bool c
     {
         laye_ast_import import = ast->imports[i];
         bool isLast = i == importCount - 1 && topLevelNodeCount == 0;
-        fprintf(state.stream, "%s", isLast ? "└─ " : "├─ ");
+        fprintf(state.stream, "%s", isLast ? "└ " : "├ ");
         PUTCOLOR(ANSI_COLOR_RED);
         fprintf(stream, "IMPORT");
         PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
