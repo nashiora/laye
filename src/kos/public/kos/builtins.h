@@ -68,7 +68,7 @@
 #endif
 
 #ifndef hashmap
-#define hashmap(K, V) struct { K key; V value; }
+#define hashmap(K, V) struct { K key; V value; }*
 #endif
 
 #ifndef strmap

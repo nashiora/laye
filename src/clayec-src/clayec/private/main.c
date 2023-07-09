@@ -131,18 +131,16 @@ int main(int argc, char** argv)
     {
         layec_file_info fileInfo = args.files[i];
         if (args.verbose) fprintf(stderr, "layec: reading contents of file '" STRING_VIEW_FORMAT "'\n", STRING_VIEW_EXPAND(fileInfo.fileName));
-
-        platform_read_file_status readStatus = 0;
-        string fileSource = platform_read_file(string_view_to_cstring(fileInfo.fileName, nullptr), nullptr, &readStatus);
-
-        if (readStatus != KOS_PLATFORM_READ_FILE_SUCCESS)
-        {
-            layec_location loc = { 0, 0, 0 };
-            layec_issue_diagnostic(&context, SEV_ERROR, loc, "Failed to read source file `"STRING_VIEW_FORMAT"`.", STRING_VIEW_EXPAND(fileInfo.fileName));
-            continue;
-        }
         
-        layec_fileid fileId = layec_context_add_file(&context, fileInfo.fileName, fileSource);
+        layec_fileid fileId = layec_context_add_file(&context, fileInfo.fileName, STRING_VIEW_EMPTY);
+        if (fileId == 0)
+        {
+            fprintf(stderr, "Failed to read source file '"STRING_VIEW_FORMAT"'", STRING_VIEW_EXPAND(fileInfo.fileName));
+            return 0;
+        }
+
+        assert(fileId > 0);
+        
         if (args.verbose) fprintf(stderr, "layec: determining what to do with file '" STRING_VIEW_FORMAT "'\n", STRING_VIEW_EXPAND(fileInfo.fileName));
 
         bool foundFrontEndForFile = false;

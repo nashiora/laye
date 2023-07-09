@@ -4,6 +4,7 @@
 
 #include "kos/ansi.h"
 #include "kos/kos.h"
+#include "kos/platform.h"
 
 #include "layec/compiler.h"
 #include "layec/diagnostic.h"
@@ -14,10 +15,69 @@ void layec_context_init(layec_context* context)
     assert(context->constantArena != nullptr);
 }
 
-layec_fileid layec_context_add_file(layec_context* context, string_view name, string source)
+static layec_fileid try_read_file(layec_context* context, string_view name, string_view fullPath)
 {
-    layec_fileid nextId = 1 + cast(layec_fileid) arrlenu(context->files);
-    layec_source_file_info file = { name, source };
+    usize numFiles = arrlenu(context->files);
+    for (usize i = 0; i < numFiles; i++)
+    {
+        layec_source_file_info info = context->files[i];
+        if (string_view_equals(info.fullPath, fullPath))
+            return i + 1;
+    }
+
+    platform_read_file_status readStatus = 0;
+    string fileSource = platform_read_file(string_view_to_cstring(fullPath, nullptr), nullptr, &readStatus);
+
+    if (readStatus != KOS_PLATFORM_READ_FILE_SUCCESS)
+        return 0;
+
+    layec_fileid nextId = 1 + cast(layec_fileid) numFiles;
+    layec_source_file_info file = { name, fullPath, fileSource };
+    arrput(context->files, file);
+
+    return nextId;
+}
+
+layec_fileid layec_context_add_file(layec_context* context, string_view name, string_view relativeTo)
+{
+    if (relativeTo.count > 0)
+    {
+        string_view relativeParent = platform_path_up(relativeTo);
+        string relativeFullPath = platform_path_combine(relativeParent, name);
+        assert(relativeFullPath.count > 0);
+        
+        string_view relativeFullPathView = string_slice(relativeFullPath, 0, relativeFullPath.count);
+        layec_fileid relativeFileId = try_read_file(context, name, relativeFullPathView);
+
+        if (relativeFileId != 0)
+            return relativeFileId;
+
+        string_deallocate(relativeFullPath);
+    }
+    
+    string cwdFullPath = platform_full_path(name);
+    assert(cwdFullPath.count > 0);
+    
+    string_view cwdFullPathView = string_slice(cwdFullPath, 0, cwdFullPath.count);
+    layec_fileid cwdFileId = try_read_file(context, name, cwdFullPathView);
+
+    return cwdFileId;
+}
+
+layec_fileid layec_context_add_file_with_source(layec_context* context, string_view name, string source)
+{
+    usize numFiles = arrlenu(context->files);
+    for (usize i = 0; i < numFiles; i++)
+    {
+        layec_source_file_info info = context->files[i];
+        if (string_view_equals(info.fullPath, name))
+        {
+            return 0;
+        }
+    }
+
+    layec_fileid nextId = 1 + cast(layec_fileid) numFiles;
+    layec_source_file_info file = { name, name, source };
     arrput(context->files, file);
     return nextId;
 }
@@ -28,6 +88,14 @@ string_view layec_context_get_file_name(layec_context* context, layec_fileid fil
     if (fileId == 0)
         return STRING_VIEW_LITERAL("<invalid file>");
     return context->files[fileId - 1].name;
+}
+
+string_view layec_context_get_file_full_path(layec_context* context, layec_fileid fileId)
+{
+    assert(fileId <= arrlenu(context->files));
+    if (fileId == 0)
+        return STRING_VIEW_LITERAL("<invalid file>");
+    return context->files[fileId - 1].fullPath;
 }
 
 string layec_context_get_file_source(layec_context* context, layec_fileid fileId)

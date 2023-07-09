@@ -121,6 +121,8 @@ typedef struct laye_ast_enum_variant
 
 typedef struct laye_ast_import
 {
+    layec_location location;
+
     // could be sourced from an identifier or a string.
     string name;
     // used to rename the inferred namespace, or to define one where one cannot be inferred otherwise.

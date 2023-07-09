@@ -32,6 +32,7 @@
 #  define string_to_cstring(s, allocator) kos_string_to_cstring(s, allocator)
 #  define string_index_of_uchar(s, uc) kos_string_index_of_uchar(s, uc)
 
+#  define string_to_view(s) kos_string_to_view(s)
 #  define string_slice(s, offset, length) kos_string_slice(s, offset, length)
 #  define string_view_slice(sv, offset, length) kos_string_view_slice(sv, offset, length)
 #  define string_view_to_cstring(sv, allocator) kos_string_view_to_cstring(sv, allocator)
@@ -48,6 +49,7 @@
 #  define string_builder_to_string_arena(sb, arena) kos_string_builder_to_string_arena(sb, arena)
 #  define string_builder_append_rune(sb, value) kos_string_builder_append_rune(sb, value)
 #  define string_builder_append_uint(sb, value) kos_string_builder_append_uint(sb, value)
+#  define string_builder_append_view(sb, value) kos_string_builder_append_view(sb, value)
 #  define string_builder_append_cstring(sb, s) kos_string_builder_append_cstring(sb, s)
 #  define string_builder_set_count(sb, count) kos_string_builder_set_count(sb, count)
 #endif // KOS_NO_SHORT_NAMES
@@ -84,6 +86,7 @@ void kos_string_deallocate(kos_string s);
 const char* kos_string_to_cstring(kos_string s, kos_allocator_function allocator);
 isize kos_string_index_of_uchar(kos_string s, uchar uc);
 
+kos_string_view kos_string_to_view(string s);
 kos_string_view kos_string_slice(string s, usize offset, usize count);
 kos_string_view kos_string_view_slice(string_view sv, usize offset, usize count);
 const char* kos_string_view_to_cstring(kos_string_view sv, kos_allocator_function allocator);
@@ -101,6 +104,7 @@ kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_
 
 void kos_string_builder_append_rune(kos_string_builder* sb, rune value);
 void kos_string_builder_append_uint(kos_string_builder* sb, usize value);
+void kos_string_builder_append_view(kos_string_builder* sb, kos_string_view value);
 void kos_string_builder_append_cstring(kos_string_builder* sb, const char* s);
 void kos_string_builder_set_count(kos_string_builder* sb, usize count);
 

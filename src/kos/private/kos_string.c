@@ -57,6 +57,11 @@ isize kos_string_index_of_uchar(kos_string s, uchar uc)
     return -1;
 }
 
+kos_string_view kos_string_to_view(string s)
+{
+    return kos_string_slice(s, 0, s.count);
+}
+
 kos_string_view kos_string_slice(string s, usize offset, usize count)
 {
     if (offset > s.count)
@@ -275,6 +280,18 @@ void kos_string_builder_append_rune(kos_string_builder* sb, rune value)
 
     runeStart[0] = '?';
     sb->count++;
+}
+
+void kos_string_builder_append_view(kos_string_builder* sb, string_view value)
+{
+    assert(sb != nullptr);
+    if (value.count == 0)
+        return;
+
+    kos_string_builder_ensure_capacity(sb, sb->count + value.count);
+
+    memcpy(sb->memory + sb->count, value.memory, value.count);
+    sb->count += value.count;
 }
 
 void kos_string_builder_append_cstring(kos_string_builder* sb, const char* s)

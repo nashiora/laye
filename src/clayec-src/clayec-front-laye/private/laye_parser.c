@@ -276,10 +276,11 @@ static laye_ast_import laye_parse_import_declaration(laye_parser* p, bool export
     assert(current != nullptr);
     assert(current->kind == LAYE_TOKEN_IMPORT);
 
-    laye_parser_advance(p);
-
     laye_ast_import result = { 0 };
+    result.location = current->location;
     result.export = export;
+
+    laye_parser_advance(p);
 
     if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER))
     {
