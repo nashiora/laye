@@ -428,6 +428,8 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type '"STRING_VIEW_FORMAT"' cannot be readonly/writeonly.", STRING_VIEW_EXPAND(current->atom)); \
             } else type->primitiveType.access = access; \
             if (SX) type->primitiveType.size = current->sizeParameter; \
+            if (LAYE_TOKEN_ ## TK == LAYE_TOKEN_IDENTIFIER) \
+                type->lookupName = layec_intern_string_view(p->context, current->atom); \
             *outTypeSyntax = type; \
             laye_parser_advance(p); \
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics); \

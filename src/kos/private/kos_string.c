@@ -282,7 +282,19 @@ void kos_string_builder_append_rune(kos_string_builder* sb, rune value)
     sb->count++;
 }
 
-void kos_string_builder_append_view(kos_string_builder* sb, string_view value)
+void kos_string_builder_append_string(kos_string_builder* sb, kos_string value)
+{
+    assert(sb != nullptr);
+    if (value.count == 0)
+        return;
+
+    kos_string_builder_ensure_capacity(sb, sb->count + value.count);
+
+    memcpy(sb->memory + sb->count, value.memory, value.count);
+    sb->count += value.count;
+}
+
+void kos_string_builder_append_view(kos_string_builder* sb, kos_string_view value)
 {
     assert(sb != nullptr);
     if (value.count == 0)

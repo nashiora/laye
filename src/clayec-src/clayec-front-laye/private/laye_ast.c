@@ -11,7 +11,64 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
     switch (typeNode->kind)
     {
         default: string_builder_append_cstring(sb, "<unknown ast type>"); break;
+
+        case LAYE_AST_NODE_TYPE_POINTER:
+        {
+            type_to_string_builder(typeNode->containerType.elementType, sb);
+            if (typeNode->containerType.access == LAYE_AST_ACCESS_READONLY)
+                string_builder_append_cstring(sb, " readonly");
+            else if (typeNode->containerType.access == LAYE_AST_ACCESS_WRITEONLY)
+            {
+                string_builder_append_cstring(sb, " writeonly");
+            }
+
+            string_builder_append_rune(sb, cast(rune) '*');
+        } break;
+
+        case LAYE_AST_NODE_TYPE_SLICE:
+        {
+            type_to_string_builder(typeNode->containerType.elementType, sb);
+            if (typeNode->containerType.access == LAYE_AST_ACCESS_READONLY)
+                string_builder_append_cstring(sb, " readonly");
+            else if (typeNode->containerType.access == LAYE_AST_ACCESS_WRITEONLY)
+            {
+                string_builder_append_cstring(sb, " writeonly");
+            }
+            
+            string_builder_append_cstring(sb, "[]");
+        } break;
+
+        case LAYE_AST_NODE_TYPE_BUFFER:
+        {
+            type_to_string_builder(typeNode->containerType.elementType, sb);
+            if (typeNode->containerType.access == LAYE_AST_ACCESS_READONLY)
+                string_builder_append_cstring(sb, " readonly");
+            else if (typeNode->containerType.access == LAYE_AST_ACCESS_WRITEONLY)
+            {
+                string_builder_append_cstring(sb, " writeonly");
+            }
+            
+            string_builder_append_cstring(sb, "[*]");
+        } break;
+
+        case LAYE_AST_NODE_TYPE_ARRAY:
+        {
+            type_to_string_builder(typeNode->containerType.elementType, sb);
+            if (typeNode->containerType.access == LAYE_AST_ACCESS_READONLY)
+                string_builder_append_cstring(sb, " readonly");
+            else if (typeNode->containerType.access == LAYE_AST_ACCESS_WRITEONLY)
+            {
+                string_builder_append_cstring(sb, " writeonly");
+            }
+
+            string_builder_append_cstring(sb, "[rank ");
+            string_builder_append_uint(sb, arrlenu(typeNode->containerType.ranks));
+            string_builder_append_cstring(sb, " array]");
+        } break;
         
+        case LAYE_AST_NODE_TYPE_NAMED: string_builder_append_string(sb, typeNode->lookupName); break;
+
+        case LAYE_AST_NODE_TYPE_INFER: string_builder_append_cstring(sb, "var"); break;
         case LAYE_AST_NODE_TYPE_NORETURN: string_builder_append_cstring(sb, "noreturn"); break;
         case LAYE_AST_NODE_TYPE_RAWPTR: string_builder_append_cstring(sb, "rawptr"); break;
         case LAYE_AST_NODE_TYPE_VOID: string_builder_append_cstring(sb, "void"); break;

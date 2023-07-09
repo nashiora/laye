@@ -49,6 +49,7 @@
 #  define string_builder_to_string_arena(sb, arena) kos_string_builder_to_string_arena(sb, arena)
 #  define string_builder_append_rune(sb, value) kos_string_builder_append_rune(sb, value)
 #  define string_builder_append_uint(sb, value) kos_string_builder_append_uint(sb, value)
+#  define string_builder_append_string(sb, s) kos_string_builder_append_string(sb, s)
 #  define string_builder_append_view(sb, value) kos_string_builder_append_view(sb, value)
 #  define string_builder_append_cstring(sb, s) kos_string_builder_append_cstring(sb, s)
 #  define string_builder_set_count(sb, count) kos_string_builder_set_count(sb, count)
@@ -104,6 +105,7 @@ kos_string kos_string_builder_to_string_arena(kos_string_builder* sb, kos_arena_
 
 void kos_string_builder_append_rune(kos_string_builder* sb, rune value);
 void kos_string_builder_append_uint(kos_string_builder* sb, usize value);
+void kos_string_builder_append_string(kos_string_builder* sb, kos_string s);
 void kos_string_builder_append_view(kos_string_builder* sb, kos_string_view value);
 void kos_string_builder_append_cstring(kos_string_builder* sb, const char* s);
 void kos_string_builder_set_count(kos_string_builder* sb, usize count);
