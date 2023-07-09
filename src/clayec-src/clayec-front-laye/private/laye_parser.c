@@ -393,6 +393,7 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             laye_parser_advance(p);
             layec_location afterOpenLocation = laye_parser_most_recent_location(p);
 
+            // TODO(local): parse array types
             if (!laye_parser_check(p, ']'))
             {
                 if (laye_parser_check(p, '*') && laye_parser_peek_check(p, ']'))
