@@ -236,12 +236,12 @@ void laye_ast_fprint(FILE* stream, layec_context* context, laye_ast* ast, bool c
         .indents = &sb,
     };
 
-    string_view fileName = layec_context_get_file_name(context, ast->fileId);
+    string_view filePath = layec_context_get_file_full_path(context, ast->fileId);
 
     PUTCOLOR(ANSI_COLOR_RED);
     fprintf(stream, "ROOT");
     PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
-    fprintf(stream, " "STRING_VIEW_FORMAT, STRING_VIEW_EXPAND(fileName));
+    fprintf(stream, " "STRING_VIEW_FORMAT, STRING_VIEW_EXPAND(filePath));
     RESETCOLOR;
     fprintf(stream, "\n");
 
