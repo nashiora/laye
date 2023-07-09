@@ -349,7 +349,7 @@ static void laye_parser_read_file_headers(laye_parser *p, laye_ast* ast)
 /// @param typeSyntax The input base type syntax, and where to put the result type syntax node.
 /// @param issueDiagnostics True if diagnostics should be issued without rewinding the token stream, false if no diagnostics should be issued and the token stream rewound on error.
 /// @return True if outTypeSyntax has been populated with a type syntax node, false otherwise.
-static bool laye_parser_try_parse_type_suffix(laye_parser* p, laye_ast_node** typeSyntax, bool issueDiagnostics)
+static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, laye_ast_node** typeSyntax, bool issueDiagnostics)
 {
     assert(p != nullptr);
     assert( typeSyntax != nullptr);
@@ -358,19 +358,93 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, laye_ast_node** ty
     if (laye_parser_is_eof(p))
         return true;
 
-    usize startIndex = p->currentTokenIndex;
-
     laye_token* current = laye_parser_current(p);
     assert(current != nullptr);
+    
+    layec_location startLocation = current->location;
 
-    // TODO(local): how will we free syntax nodes?
+    laye_ast_type_access access = LAYE_AST_ACCESS_NONE;
+    if (laye_parser_check(p, LAYE_TOKEN_READONLY))
+    {
+        laye_parser_advance(p);
+        access = LAYE_AST_ACCESS_READONLY;
+    }
+    else if (laye_parser_check(p, LAYE_TOKEN_WRITEONLY))
+    {
+        laye_parser_advance(p);
+        access = LAYE_AST_ACCESS_WRITEONLY;
+    }
+
     switch (current->kind)
     {
         case '*':
         {
+            layec_location typeLocation = layec_location_combine(startLocation, current->location);
+            laye_parser_advance(p);
+            laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_POINTER, typeLocation);
+            newType->containerType.elementType = *typeSyntax;
+            newType->containerType.access = access;
+            *typeSyntax = newType;
+            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
         } break;
 
-        default: break;
+        case '[':
+        {
+            laye_parser_advance(p);
+            layec_location afterOpenLocation = laye_parser_most_recent_location(p);
+
+            if (!laye_parser_check(p, ']'))
+            {
+                if (laye_parser_check(p, '*') && laye_parser_peek_check(p, ']'))
+                {
+                    laye_parser_advance(p);
+                    current = laye_parser_current(p);
+                    laye_parser_advance(p); // ']'
+                    
+                    layec_location typeLocation = layec_location_combine(startLocation, current->location);
+                    laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_BUFFER, typeLocation);
+                    newType->containerType.elementType = *typeSyntax;
+                    newType->containerType.access = access;
+                    *typeSyntax = newType;
+                    return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+                }
+
+                if (issueDiagnostics)
+                {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, afterOpenLocation, "Expected ']'.");
+                    *typeSyntax = laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, afterOpenLocation);
+                    return true;
+                }
+                
+                p->currentTokenIndex = startIndex;
+                return false;
+            }
+
+            current = laye_parser_current(p);
+            laye_parser_advance(p); // ']'
+
+            layec_location typeLocation = layec_location_combine(startLocation, current->location);
+            laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_SLICE, typeLocation);
+            newType->containerType.elementType = *typeSyntax;
+            newType->containerType.access = access;
+            *typeSyntax = newType;
+            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+        } break;
+
+        default:
+            if (access != LAYE_AST_ACCESS_NONE)
+            {
+                if (issueDiagnostics)
+                {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, startLocation, "Access specifier must be followed by '*' or '[' to construct a container type.");
+                    *typeSyntax = laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, startLocation);
+                    return true;
+                }
+
+                p->currentTokenIndex = startIndex;
+                return false;
+            }
+            break;
     }
 
     return true;
@@ -432,7 +506,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 type->lookupName = layec_intern_string_view(p->context, current->atom); \
             *outTypeSyntax = type; \
             laye_parser_advance(p); \
-            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics); \
+            return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics); \
         }
 
     switch (current->kind)

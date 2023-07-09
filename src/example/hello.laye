@@ -1,8 +1,9 @@
 import "numbers.laye";
 
-i32 main(i32 argc, readonly string argv)
+c_int main(c_int argc, readonly c_string[*] argv)
 {
-    i32 retval = 42;
-    retval = 69;
-    return retval;
+}
+
+void main(readonly string[] argv)
+{
 }

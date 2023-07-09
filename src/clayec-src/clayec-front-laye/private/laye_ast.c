@@ -112,6 +112,23 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
                 string_builder_append_cstring(sb, "writeonly ");
             string_builder_append_cstring(sb, "c_string");
             break;
+        case LAYE_AST_NODE_TYPE_C_CHAR: string_builder_append_cstring(sb, "c_char"); break;
+        case LAYE_AST_NODE_TYPE_C_SCHAR: string_builder_append_cstring(sb, "c_schar"); break;
+        case LAYE_AST_NODE_TYPE_C_UCHAR: string_builder_append_cstring(sb, "c_uchar"); break;
+        case LAYE_AST_NODE_TYPE_C_SHORT: string_builder_append_cstring(sb, "c_short"); break;
+        case LAYE_AST_NODE_TYPE_C_USHORT: string_builder_append_cstring(sb, "c_ushort"); break;
+        case LAYE_AST_NODE_TYPE_C_INT: string_builder_append_cstring(sb, "c_int"); break;
+        case LAYE_AST_NODE_TYPE_C_UINT: string_builder_append_cstring(sb, "c_uint"); break;
+        case LAYE_AST_NODE_TYPE_C_LONG: string_builder_append_cstring(sb, "c_long"); break;
+        case LAYE_AST_NODE_TYPE_C_ULONG: string_builder_append_cstring(sb, "c_ulong"); break;
+        case LAYE_AST_NODE_TYPE_C_LONGLONG: string_builder_append_cstring(sb, "c_longlong"); break;
+        case LAYE_AST_NODE_TYPE_C_ULONGLONG: string_builder_append_cstring(sb, "c_ulonglong"); break;
+        case LAYE_AST_NODE_TYPE_C_SIZE_T: string_builder_append_cstring(sb, "c_size_t"); break;
+        case LAYE_AST_NODE_TYPE_C_PTRDIFF_T: string_builder_append_cstring(sb, "c_ptrdiff_t"); break;
+        case LAYE_AST_NODE_TYPE_C_FLOAT: string_builder_append_cstring(sb, "c_float"); break;
+        case LAYE_AST_NODE_TYPE_C_DOUBLE: string_builder_append_cstring(sb, "c_double"); break;
+        case LAYE_AST_NODE_TYPE_C_LONGDOUBLE: string_builder_append_cstring(sb, "c_longdouble"); break;
+        case LAYE_AST_NODE_TYPE_C_BOOL: string_builder_append_cstring(sb, "c_bool"); break;
     }
 }
 
