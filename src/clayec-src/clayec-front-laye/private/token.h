@@ -59,6 +59,7 @@
     K(OPERATOR, "operator") \
     K(VOID, "void") \
     K(VAR, "var") \
+    K(NORETURN, "noreturn") \
     K(RAWPTR, "rawptr") \
     K(BOOL, "bool") \
     K(STRING, "string") \
@@ -68,21 +69,24 @@
     K(FLOAT, "float") \
     K(ISIZE, "isize") \
     K(USIZE, "usize") \
-    K(CCHAR, "c_char") \
-    K(CSCHAR, "c_schar") \
-    K(CUCHAR, "c_uchar") \
-    K(CSHORT, "c_short") \
-    K(CUSHORT, "c_ushort") \
-    K(CSINT, "c_int") \
-    K(CUINT, "c_uint") \
-    K(CLONG, "c_long") \
-    K(CULONG, "c_ulong") \
-    K(CLONGLONG, "c_longlong") \
-    K(CULONGLONG, "c_ulonglong") \
-    K(CFLOAT, "c_float") \
-    K(CDOUBLE, "c_double") \
-    K(CLONGDOUBLE, "c_longdouble") \
-    K(CBOOL, "c_bool") \
+    K(C_CHAR, "c_char") \
+    K(C_STRING, "c_string") \
+    K(C_SCHAR, "c_schar") \
+    K(C_UCHAR, "c_uchar") \
+    K(C_SHORT, "c_short") \
+    K(C_USHORT, "c_ushort") \
+    K(C_INT, "c_int") \
+    K(C_UINT, "c_uint") \
+    K(C_LONG, "c_long") \
+    K(C_ULONG, "c_ulong") \
+    K(C_LONGLONG, "c_longlong") \
+    K(C_ULONGLONG, "c_ulonglong") \
+    K(C_SIZE_T, "c_size_t") \
+    K(C_PTRDIFF_T, "c_ptrdiff_t") \
+    K(C_FLOAT, "c_float") \
+    K(C_DOUBLE, "c_double") \
+    K(C_LONGDOUBLE, "c_longdouble") \
+    K(C_BOOL, "c_bool") \
     K(CAST, "cast") \
     K(DISCARD, "discard") \
     K(SIZEOF, "sizeof") \
@@ -93,7 +97,6 @@
     K(OR, "or") \
     K(XOR, "xor") \
     K(CONST, "const") \
-    K(NORETURN, "noreturn") \
     K(FOREIGN, "foreign") \
     K(INLINE, "inline") \
     K(CALLCONV, "callconv")

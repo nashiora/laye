@@ -405,6 +405,86 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
 
     switch (current->kind)
     {
+        case LAYE_TOKEN_VAR:
+        {
+            laye_ast_node* varType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INFER, current->location);
+            *outTypeSyntax = varType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_NORETURN:
+        {
+            laye_ast_node* noreturnType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NORETURN, current->location);
+            *outTypeSyntax = noreturnType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_RAWPTR:
+        {
+            laye_ast_node* rawptrType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_RAWPTR, current->location);
+            *outTypeSyntax = rawptrType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_VOID:
+        {
+            laye_ast_node* voidType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_VOID, current->location);
+            *outTypeSyntax = voidType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_STRING:
+        {
+            laye_ast_node* stringType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_STRING, current->location);
+            *outTypeSyntax = stringType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_RUNE:
+        {
+            laye_ast_node* runeType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_RUNE, current->location);
+            *outTypeSyntax = runeType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_INT:
+        {
+            laye_ast_node* intType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INT, current->location);
+            *outTypeSyntax = intType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_UINT:
+        {
+            laye_ast_node* uintType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_UINT, current->location);
+            *outTypeSyntax = uintType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_BOOL:
+        {
+            laye_ast_node* boolType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_BOOL, current->location);
+            *outTypeSyntax = boolType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+        
+        case LAYE_TOKEN_FLOAT:
+        {
+            laye_ast_node* floatType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FLOAT, current->location);
+            *outTypeSyntax = floatType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
         case LAYE_TOKEN_IX:
         {
             laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INT_SIZED, current->location);
@@ -437,6 +517,150 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             laye_ast_node* sizedIntType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FLOAT_SIZED, current->location);
             sizedIntType->primitiveType.size = current->sizeParameter;
             *outTypeSyntax = sizedIntType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_CHAR:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_CHAR, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_SCHAR:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_SCHAR, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_UCHAR:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_UCHAR, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_STRING:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_STRING, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_SHORT:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_SHORT, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_USHORT:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_USHORT, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_INT:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_INT, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_UINT:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_UINT, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_LONG:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_LONG, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_ULONG:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_ULONG, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_LONGLONG:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_LONGLONG, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_ULONGLONG:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_ULONGLONG, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_SIZE_T:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_SIZE_T, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_PTRDIFF_T:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_PTRDIFF_T, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_FLOAT:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_FLOAT, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_DOUBLE:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_DOUBLE, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_LONGDOUBLE:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_LONGDOUBLE, current->location);
+            *outTypeSyntax = cType;
+            laye_parser_advance(p);
+            return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
+        }
+
+        case LAYE_TOKEN_C_BOOL:
+        {
+            laye_ast_node* cType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_C_BOOL, current->location);
+            *outTypeSyntax = cType;
             laye_parser_advance(p);
             return laye_parser_try_parse_type_suffix(p, outTypeSyntax, issueDiagnostics);
         }

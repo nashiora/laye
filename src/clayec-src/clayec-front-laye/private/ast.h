@@ -11,7 +11,7 @@
 
 #define LAYE_AST_TYPE_KINDS \
     T(ERROR) \
-    T(IMPLICIT) \
+    T(INFER) \
     T(STRUCT) \
     T(ENUM) \
     T(UNION) \
@@ -24,10 +24,10 @@
     T(LITERAL_STRING) \
     T(LITERAL_INT) \
     T(LITERAL_REAL) \
+    T(NORETURN) \
     T(RAWPTR) \
     T(VOID) \
     T(STRING) \
-    T(CSTRING) \
     T(RUNE) \
     T(BOOL) \
     T(BOOL_SIZED) \
@@ -36,7 +36,25 @@
     T(UINT) \
     T(UINT_SIZED) \
     T(FLOAT) \
-    T(FLOAT_SIZED)
+    T(FLOAT_SIZED) \
+    T(C_CHAR) \
+    T(C_SCHAR) \
+    T(C_UCHAR) \
+    T(C_STRING) \
+    T(C_SHORT) \
+    T(C_USHORT) \
+    T(C_INT) \
+    T(C_UINT) \
+    T(C_LONG) \
+    T(C_ULONG) \
+    T(C_LONGLONG) \
+    T(C_ULONGLONG) \
+    T(C_SIZE_T) \
+    T(C_PTRDIFF_T) \
+    T(C_FLOAT) \
+    T(C_DOUBLE) \
+    T(C_LONGDOUBLE) \
+    T(C_BOOL)
 
 #define LAYE_AST_NODE_KINDS \
     A(BINDING_DECLARATION) \
@@ -96,7 +114,6 @@ typedef enum laye_ast_modifier_kind
     LAYE_AST_MODIFIER_INVALID,
     LAYE_AST_MODIFIER_EXPORT,
     LAYE_AST_MODIFIER_CALLCONV,
-    LAYE_AST_MODIFIER_NORETURN,
     LAYE_AST_MODIFIER_INLINE,
     LAYE_AST_MODIFIER_COUNT,
 } laye_ast_modifier_kind;
