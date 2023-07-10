@@ -6,6 +6,31 @@
 #include "ast.h"
 #include "token.h"
 
+static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb);
+
+static void template_args_to_string_builder(list(laye_ast_template_argument) args, string_builder* sb)
+{
+    string_builder_append_cstring(sb, "<");
+    for (usize i = 0, iLen = arrlenu(args); i < iLen; i++)
+    {
+        if (i > 0)
+            string_builder_append_cstring(sb, ", ");
+
+        laye_ast_template_argument arg = args[i];
+        switch (arg.kind)
+        {
+            case LAYE_TEMPLATE_ARG_TYPE:
+                type_to_string_builder(arg.value, sb);
+                break;
+
+            case LAYE_TEMPLATE_ARG_VALUE:
+                string_builder_append_cstring(sb, "[expression]");
+                break;
+        }
+    }
+    string_builder_append_cstring(sb, ">");
+}
+
 static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
 {
     switch (typeNode->kind)
@@ -79,7 +104,26 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             string_builder_append_cstring(sb, " array]");
         } break;
         
-        case LAYE_AST_NODE_TYPE_NAMED: string_builder_append_string(sb, typeNode->nameLookup.name); break;
+        case LAYE_AST_NODE_TYPE_NAMED:
+        {
+            string_builder_append_string(sb, typeNode->nameLookup.name);
+            if (arrlenu(typeNode->nameLookup.templateArguments) > 0)
+                template_args_to_string_builder(typeNode->nameLookup.templateArguments, sb);
+        } break;
+
+        case LAYE_AST_NODE_TYPE_PATH_RESOLVE:
+        {
+            if (typeNode->pathLookup.isHeadless)
+                string_builder_append_cstring(sb, "::");
+            for (usize i = 0, iLen = arrlenu(typeNode->pathLookup.path); i < iLen; i++)
+            {
+                if (i > 0)
+                    string_builder_append_cstring(sb, "::");
+                string_builder_append_string(sb, typeNode->pathLookup.path[i]);
+            }
+            if (arrlenu(typeNode->pathLookup.templateArguments) > 0)
+                template_args_to_string_builder(typeNode->pathLookup.templateArguments, sb);
+        } break;
 
         case LAYE_AST_NODE_TYPE_INFER: string_builder_append_cstring(sb, "var"); break;
         case LAYE_AST_NODE_TYPE_NORETURN: string_builder_append_cstring(sb, "noreturn"); break;

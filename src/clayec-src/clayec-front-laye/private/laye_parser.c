@@ -347,6 +347,64 @@ static void laye_parser_read_file_headers(laye_parser *p, laye_ast* ast)
 static laye_ast_node* laye_parse_expression(laye_parser* p);
 static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSyntax, bool issueDiagnostics);
 
+static list(laye_ast_template_argument) laye_parse_template_arguments(laye_parser* p)
+{
+    assert(p != nullptr);
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+    assert(current->kind == '<', "when calling laye_parse_template_arguments, the current token must be '<'");
+
+    list(laye_ast_template_argument) result = nullptr;
+
+    laye_parser_advance(p);
+
+    while (!laye_parser_is_eof(p) && !laye_parser_check(p, '>'))
+    {
+        laye_ast_node* maybeTypeNode = nullptr;
+        bool typeSuccess = laye_parser_try_parse_type(p, &maybeTypeNode, false);
+        if (typeSuccess)
+        {
+            assert(maybeTypeNode != nullptr);
+            laye_ast_template_argument arg = {
+                .kind = LAYE_TEMPLATE_ARG_TYPE,
+                .value = maybeTypeNode,
+            };
+            arrput(result, arg);
+        }
+        else
+        {
+            laye_ast_node* expression = laye_parse_expression(p);
+            assert(expression != nullptr);
+            laye_ast_template_argument arg = {
+                .kind = LAYE_TEMPLATE_ARG_VALUE,
+                .value = expression,
+            };
+            arrput(result, arg);
+        }
+
+        if (!laye_parser_check(p, ','))
+            break;
+
+        laye_parser_advance(p);
+        if (!laye_parser_check(p, '>'))
+            continue;
+
+        layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Type parameter expected");
+        break;
+    }
+
+    laye_token* closingToken = nullptr;
+    laye_parser_expect_out(p, '>', nullptr, &closingToken);
+
+    if (arrlenu(result) == 0)
+    {
+        layec_issue_diagnostic(p->context, SEV_ERROR, closingToken->location, "Template argument lists cannot be empty");
+    }
+
+    return result;
+}
+
 /// @brief Attempts to parse a type suffix.
 /// @param p The parser to use to parse a type suffix.
 /// @param typeSyntax The input base type syntax, and where to put the result type syntax node.
@@ -607,16 +665,73 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type '"STRING_VIEW_FORMAT"' cannot be readonly/writeonly.", STRING_VIEW_EXPAND(current->atom)); \
             } else type->primitiveType.access = access; \
             if (SX) type->primitiveType.size = current->sizeParameter; \
-            if (LAYE_TOKEN_ ## TK == LAYE_TOKEN_IDENTIFIER) \
-                type->nameLookup.name = layec_intern_string_view(p->context, current->atom); \
             *outTypeSyntax = type; \
             laye_parser_advance(p); \
             return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics); \
         }
 
+    string identifierName = { 0 };
+    list(laye_ast_template_argument) templateArguments = nullptr;
+    bool isPathHeadless = false;
     switch (current->kind)
     {
-        WORD_TYPE(IDENTIFIER, NAMED, false)
+        case LAYE_TOKEN_COLON_COLON:
+            isPathHeadless = true;
+            goto start_path_resolution_parse;
+        case LAYE_TOKEN_IDENTIFIER:
+        {
+            identifierName = layec_intern_string_view(p->context, current->atom);
+            laye_parser_advance(p);
+            
+            list(laye_ast_template_argument) templateArguments = nullptr;
+
+            if (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
+            {
+            start_path_resolution_parse:;
+                list(string) path = nullptr;
+                if (!isPathHeadless)
+                {
+                    assert(identifierName.count > 0, "isPathHeadless was false, so TOKEN_IDENTIFIER should've assigned identifierName");
+                    arrput(path, identifierName);
+                }
+
+                layec_location lastIdentifierLocation = { 0 };
+                while (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
+                {
+                    laye_parser_advance(p);
+                    laye_token* nextIdent = laye_parser_expect_identifier(p, nullptr);
+                    assert(nextIdent != nullptr);
+                    lastIdentifierLocation = nextIdent->location;
+                    string nextName = layec_intern_string_view(p->context, nextIdent->atom);
+                    arrput(path, nextName);
+                }
+
+                if (laye_parser_check(p, '<') && layec_location_immediately_follows(lastIdentifierLocation, laye_parser_current(p)->location))
+                {
+                    templateArguments = laye_parse_template_arguments(p);
+                }
+
+                laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_PATH_RESOLVE, current->location);
+                type->pathLookup.path = path;
+                type->pathLookup.templateArguments = templateArguments;
+                type->pathLookup.isHeadless = isPathHeadless;
+                *outTypeSyntax = type;
+                return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics);
+            }
+
+            if (laye_parser_check(p, '<') && layec_location_immediately_follows(current->location, laye_parser_current(p)->location))
+            {
+                templateArguments = laye_parse_template_arguments(p);
+            }
+
+            laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NAMED, current->location);
+            assert(type != nullptr);
+            type->nameLookup.name = identifierName;
+            type->nameLookup.templateArguments = templateArguments;
+            *outTypeSyntax = type;
+            return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics);
+        }
+
         WORD_TYPE(VAR, INFER, false)
         WORD_TYPE(NORETURN, NORETURN, false)
         WORD_TYPE(RAWPTR, RAWPTR, false)
@@ -727,29 +842,6 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
     }
 
     return expression;
-}
-
-static list(laye_ast_template_argument) laye_parse_template_arguments(laye_parser* p)
-{
-    assert(p != nullptr);
-
-    laye_token* current = laye_parser_current(p);
-    assert(current != nullptr);
-    assert(current->kind == '<', "when calling laye_parse_template_arguments, the current token must be '<'");
-
-    list(laye_ast_template_argument) result = nullptr;
-
-    laye_parser_advance(p);
-
-    laye_token* closingToken = nullptr;
-    laye_parser_expect_out(p, '>', nullptr, &closingToken);
-
-    if (arrlenu(result) == 0)
-    {
-        layec_issue_diagnostic(p->context, SEV_ERROR, closingToken->location, "Template argument lists cannot be empty");
-    }
-
-    return result;
 }
 
 static laye_ast_node* laye_parse_primary(laye_parser* p)

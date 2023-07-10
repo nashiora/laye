@@ -13,6 +13,7 @@
     T(ERROR) \
     T(INFER) \
     T(NAMED) \
+    T(PATH_RESOLVE) \
     T(ARRAY) \
     T(SLICE) \
     T(POINTER) \
