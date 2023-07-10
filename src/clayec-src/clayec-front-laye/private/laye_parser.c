@@ -344,6 +344,7 @@ static void laye_parser_read_file_headers(laye_parser *p, laye_ast* ast)
     }
 }
 
+static laye_ast_node* laye_parse_expression(laye_parser* p);
 static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSyntax, bool issueDiagnostics);
 
 /// @brief Attempts to parse a type suffix.
@@ -407,6 +408,44 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
                     layec_location typeLocation = layec_location_combine(startLocation, current->location);
                     laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_BUFFER, typeLocation);
                     newType->containerType.elementType = *typeSyntax;
+                    newType->containerType.access = access;
+                    *typeSyntax = newType;
+                    return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+                }
+                else
+                {
+                    list(laye_ast_node*) ranks = nullptr;
+                    while (!laye_parser_is_eof(p) && !laye_parser_check(p, ']'))
+                    {
+                        laye_ast_node* rank = laye_parse_expression(p);
+                        assert(rank != nullptr);
+                        arrput(ranks, rank);
+
+                        if (!laye_parser_check(p, ','))
+                            break;
+                        
+                        laye_parser_advance(p);
+                        if (!laye_parser_check(p, ']'))
+                            continue;
+                            
+                        if (issueDiagnostics)
+                        {
+                            layec_issue_diagnostic(p->context, SEV_ERROR, afterOpenLocation, "Expected ']' or constant expression for array type rank.");
+                            break;
+                        }
+                        else
+                        {
+                            p->currentTokenIndex = startIndex;
+                            return false;
+                        }
+                    }
+
+                    laye_parser_expect(p, ']', nullptr);
+
+                    layec_location typeLocation = layec_location_combine(startLocation, current->location);
+                    laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ARRAY, typeLocation);
+                    newType->containerType.elementType = *typeSyntax;
+                    newType->containerType.ranks = ranks;
                     newType->containerType.access = access;
                     *typeSyntax = newType;
                     return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
@@ -569,7 +608,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             } else type->primitiveType.access = access; \
             if (SX) type->primitiveType.size = current->sizeParameter; \
             if (LAYE_TOKEN_ ## TK == LAYE_TOKEN_IDENTIFIER) \
-                type->lookupName = layec_intern_string_view(p->context, current->atom); \
+                type->nameLookup.name = layec_intern_string_view(p->context, current->atom); \
             *outTypeSyntax = type; \
             laye_parser_advance(p); \
             return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics); \
@@ -626,8 +665,6 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         }
     }
 }
-
-static laye_ast_node* laye_parse_expression(laye_parser* p);
 
 static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* expression)
 {
@@ -692,6 +729,29 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
     return expression;
 }
 
+static list(laye_ast_template_argument) laye_parse_template_arguments(laye_parser* p)
+{
+    assert(p != nullptr);
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+    assert(current->kind == '<', "when calling laye_parse_template_arguments, the current token must be '<'");
+
+    list(laye_ast_template_argument) result = nullptr;
+
+    laye_parser_advance(p);
+
+    laye_token* closingToken = nullptr;
+    laye_parser_expect_out(p, '>', nullptr, &closingToken);
+
+    if (arrlenu(result) == 0)
+    {
+        layec_issue_diagnostic(p->context, SEV_ERROR, closingToken->location, "Template argument lists cannot be empty");
+    }
+
+    return result;
+}
+
 static laye_ast_node* laye_parse_primary(laye_parser* p)
 {
     assert(p != nullptr);
@@ -717,6 +777,8 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
         {
             identifierName = layec_intern_string_view(p->context, current->atom);
             laye_parser_advance(p);
+            
+            list(laye_ast_template_argument) templateArguments = nullptr;
 
             if (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
             {
@@ -728,24 +790,38 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
                     arrput(path, identifierName);
                 }
 
+                layec_location lastIdentifierLocation = { 0 };
                 while (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
                 {
                     laye_parser_advance(p);
                     laye_token* nextIdent = laye_parser_expect_identifier(p, nullptr);
                     assert(nextIdent != nullptr);
+                    lastIdentifierLocation = nextIdent->location;
                     string nextName = layec_intern_string_view(p->context, nextIdent->atom);
                     arrput(path, nextName);
                 }
 
+                if (laye_parser_check(p, '<') && layec_location_immediately_follows(lastIdentifierLocation, laye_parser_current(p)->location))
+                {
+                    templateArguments = laye_parse_template_arguments(p);
+                }
+
                 laye_ast_node* pathNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE, current->location);
-                pathNode->lookup.isHeadless = isPathHeadless;
-                pathNode->lookup.path = path;
+                pathNode->pathLookup.path = path;
+                pathNode->pathLookup.templateArguments = templateArguments;
+                pathNode->pathLookup.isHeadless = isPathHeadless;
                 return laye_parse_primary_suffix(p, pathNode);
+            }
+
+            if (laye_parser_check(p, '<') && layec_location_immediately_follows(current->location, laye_parser_current(p)->location))
+            {
+                templateArguments = laye_parse_template_arguments(p);
             }
 
             laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_LOOKUP, current->location);
             assert(resultNode != nullptr);
-            resultNode->lookupName = identifierName;
+            resultNode->nameLookup.name = identifierName;
+            resultNode->nameLookup.templateArguments = templateArguments;
             return laye_parse_primary_suffix(p, resultNode);
         }
 
@@ -876,11 +952,85 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
     }
 }
 
+static list(laye_ast_template_parameter) laye_parse_template_parameters(laye_parser* p)
+{
+    assert(p != nullptr);
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+    assert(current->kind == '<', "when calling laye_parse_template_parameters, the current token must be '<'");
+
+    list(laye_ast_template_parameter) result = nullptr;
+
+    laye_parser_advance(p);
+
+    while (!laye_parser_is_eof(p) && !laye_parser_check(p, '>'))
+    {
+        if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER) && (laye_parser_peek_check(p, ',') || laye_parser_peek_check(p, '>')))
+        {
+            laye_token* typeParamToken = laye_parser_current(p);
+            assert(typeParamToken != nullptr);
+            string typeParamName = layec_intern_string_view(p->context, typeParamToken->atom);
+            laye_parser_advance(p);
+
+            laye_ast_template_parameter param = {
+                .kind = LAYE_TEMPLATE_PARAM_TYPE,
+                .name = typeParamName,
+            };
+            arrput(result, param);
+        }
+        else
+        {
+            laye_ast_node* valueType = nullptr;
+            bool typeSuccess = laye_parser_try_parse_type(p, &valueType, true);
+            assert(typeSuccess);
+            assert(valueType != nullptr);
+
+            laye_token* valueNameToken = laye_parser_expect_identifier(p, nullptr);
+            assert(valueNameToken != nullptr);
+            string valueName = layec_intern_string_view(p->context, valueNameToken->atom);
+
+            laye_ast_template_parameter param = {
+                .kind = LAYE_TEMPLATE_PARAM_VALUE,
+                .valueType = valueType,
+                .name = valueName,
+            };
+            arrput(result, param);
+        }
+
+        if (!laye_parser_check(p, ','))
+            break;
+
+        laye_parser_advance(p);
+        if (!laye_parser_check(p, '>'))
+            continue;
+
+        layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Type parameter expected");
+        break;
+    }
+
+    laye_token* closingToken = nullptr;
+    laye_parser_expect_out(p, '>', nullptr, &closingToken);
+
+    if (arrlenu(result) == 0)
+    {
+        layec_issue_diagnostic(p->context, SEV_ERROR, closingToken->location, "Template parameter lists cannot be empty");
+    }
+
+    return result;
+}
+
 static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_ast_modifier) modifiers, laye_ast_node* declType, laye_token* name)
 {
     assert(p != nullptr);
     assert(declType != nullptr);
     assert(name != nullptr);
+
+    list(laye_ast_template_parameter) templateParameters = nullptr;
+    if (laye_parser_check(p, '<'))
+    {
+        templateParameters = laye_parse_template_parameters(p);
+    }
 
     // TODO(local): parse functions
     if (laye_parser_check(p, '('))
@@ -951,10 +1101,16 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         functionDeclaration->functionDeclaration.modifiers = modifiers;
         functionDeclaration->functionDeclaration.returnType = declType;
         functionDeclaration->functionDeclaration.name = layec_intern_string_view(p->context, name->atom);
+        functionDeclaration->functionDeclaration.templateParameters = templateParameters;
         functionDeclaration->functionDeclaration.parameterBindings = parameterBindingNodes;
         functionDeclaration->functionDeclaration.body = functionBody;
 
         return functionDeclaration;
+    }
+
+    if (arrlenu(templateParameters) > 0)
+    {
+        layec_issue_diagnostic(p->context, SEV_ERROR, name->location, "Binding declarations cannot have template parameters.");
     }
 
     laye_ast_node* bindingDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, name->location);
@@ -1030,6 +1186,52 @@ static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
 after_modifier_parse:;
     switch (current->kind)
     {
+        case LAYE_TOKEN_STRUCT:
+        {
+            layec_location startLocation = current->location;
+            laye_parser_advance(p);
+
+            laye_token* nameToken = laye_parser_expect_identifier(p, nullptr);
+            string name = layec_intern_string_view(p->context, nameToken->atom);
+
+            list(laye_ast_template_parameter) templateParameters = nullptr;
+            if (laye_parser_check(p, '<'))
+            {
+                templateParameters = laye_parse_template_parameters(p);
+            }
+
+            laye_parser_expect(p, '{', nullptr);
+
+            list(laye_ast_node*) fieldBindings = nullptr;
+            while (!laye_parser_is_eof(p) && !laye_parser_check(p, '}'))
+            {
+                laye_ast_node* fieldType = nullptr;
+                bool typeSuccess = laye_parser_try_parse_type(p, &fieldType, true);
+                assert(typeSuccess);
+
+                laye_token* fieldNameToken = laye_parser_expect_identifier(p, nullptr);
+                string fieldName = layec_intern_string_view(p->context, fieldNameToken->atom);
+
+                laye_parser_expect(p, ';', nullptr);
+
+                laye_ast_node* fieldBinding = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, fieldNameToken->location);
+                fieldBinding->bindingDeclaration.declaredType = fieldType;
+                fieldBinding->bindingDeclaration.name = fieldName;
+                arrput(fieldBindings, fieldBinding);
+            }
+            
+            laye_parser_expect(p, '}', nullptr);
+
+            layec_location location = layec_location_combine(startLocation, laye_parser_most_recent_location(p));
+            laye_ast_node* decl = laye_ast_node_alloc(p, LAYE_AST_NODE_STRUCT_DECLARATION, location);
+            decl->structDeclaration.modifiers = modifiers;
+            decl->structDeclaration.name = name;
+            decl->structDeclaration.templateParameters = templateParameters;
+            decl->structDeclaration.fieldBindings = fieldBindings;
+
+            return decl;
+        }
+
         default:
         {
             usize startIndex = p->currentTokenIndex;
