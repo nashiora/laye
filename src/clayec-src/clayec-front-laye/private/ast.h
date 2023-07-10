@@ -17,6 +17,7 @@
     T(SLICE) \
     T(POINTER) \
     T(BUFFER) \
+    T(FUNCTION) \
     T(LITERAL_BOOL) \
     T(LITERAL_STRING) \
     T(LITERAL_INT) \
@@ -178,6 +179,12 @@ struct laye_ast_node
 
         struct
         {
+            laye_ast_node* returnType;
+            list(laye_ast_node*) parameterTypes;
+        } functionType;
+
+        struct
+        {
             list(laye_ast_modifier) modifiers;
             laye_ast_node* declaredType;
             string name;
@@ -224,7 +231,7 @@ struct laye_ast_node
             string stringValue;
         } literal;
         
-        union
+        struct
         {
             laye_ast_node* target;
             list(laye_ast_node*) arguments;

@@ -12,6 +12,19 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
     {
         default: string_builder_append_cstring(sb, "<unknown ast type>"); break;
 
+        case LAYE_AST_NODE_TYPE_FUNCTION:
+        {
+            type_to_string_builder(typeNode->functionType.returnType, sb);
+            string_builder_append_rune(sb, cast(rune) '(');
+            for (usize i = 0, iLen = arrlenu(typeNode->functionType.parameterTypes); i < iLen; i++)
+            {
+                if (i > 0)
+                    string_builder_append_cstring(sb, ", ");
+                type_to_string_builder(typeNode->functionType.parameterTypes[i], sb);
+            }
+            string_builder_append_rune(sb, cast(rune) ')');
+        } break;
+
         case LAYE_AST_NODE_TYPE_POINTER:
         {
             type_to_string_builder(typeNode->containerType.elementType, sb);
@@ -260,6 +273,18 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, ">");
         } break;
 
+        case LAYE_AST_NODE_EXPRESSION_STRING:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Value: ");
+            RESETCOLOR;
+            fprintf(state.stream, "\""STRING_FORMAT"\"", STRING_EXPAND(node->literal.stringValue));
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+
         case LAYE_AST_NODE_EXPRESSION_INTEGER:
         {
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
@@ -291,6 +316,12 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             }
         } break;
 
+        case LAYE_AST_NODE_BINDING_DECLARATION:
+        {
+            if (node->bindingDeclaration.initialValue != nullptr)
+                laye_ast_fprint_node(state, node->bindingDeclaration.initialValue, true);
+        } break;
+
         case LAYE_AST_NODE_STATEMENT_BLOCK:
         {
             for (usize i = 0, len = arrlenu(node->statements); i < len; i++)
@@ -306,6 +337,14 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         case LAYE_AST_NODE_STATEMENT_RETURN:
         {
             laye_ast_fprint_node(state, node->returnValue, true);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_INVOKE:
+        {
+            usize argLen = arrlenu(node->invoke.arguments);
+            laye_ast_fprint_node(state, node->invoke.target, argLen == 0);
+            for (usize i = 0; i < argLen; i++)
+                laye_ast_fprint_node(state, node->invoke.arguments[i], i == argLen - 1);
         } break;
     }
 

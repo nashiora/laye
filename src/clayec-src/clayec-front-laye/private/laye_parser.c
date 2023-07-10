@@ -344,6 +344,8 @@ static void laye_parser_read_file_headers(laye_parser *p, laye_ast* ast)
     }
 }
 
+static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSyntax, bool issueDiagnostics);
+
 /// @brief Attempts to parse a type suffix.
 /// @param p The parser to use to parse a type suffix.
 /// @param typeSyntax The input base type syntax, and where to put the result type syntax node.
@@ -428,6 +430,69 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_SLICE, typeLocation);
             newType->containerType.elementType = *typeSyntax;
             newType->containerType.access = access;
+            *typeSyntax = newType;
+            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+        } break;
+
+        case '(':
+        {
+            if (access != LAYE_AST_ACCESS_NONE && issueDiagnostics)
+            {
+                layec_issue_diagnostic(p->context, SEV_ERROR, startLocation, "Access specifier must be followed by '*' or '[' to construct a container type.");
+            }
+
+            laye_parser_advance(p);
+
+            list(laye_ast_node*) parameterTypes = nullptr;
+            bool endsWithComma = false;
+            while (!laye_parser_is_eof(p) && !laye_parser_check(p, ')'))
+            {
+                endsWithComma = false;
+                if (laye_parser_check(p, ','))
+                {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Type expected as function type parameter.");
+                    laye_parser_advance(p);
+                    continue;
+                }
+
+                laye_ast_node* parameterType = nullptr;
+                bool success = laye_parser_try_parse_type(p, &parameterType, issueDiagnostics);
+
+                if (!issueDiagnostics && !success)
+                {
+                    p->currentTokenIndex = startIndex;
+                    return false;
+                }
+                // else assume we already issued sufficient diagnostics
+
+                arrput(parameterTypes, parameterType);
+
+                if (!laye_parser_check(p, ','))
+                    break;
+                laye_parser_advance(p);
+                endsWithComma = true;
+            }
+
+            current = laye_parser_current(p);
+            laye_parser_expect(p, ')', nullptr);
+
+            if (endsWithComma)
+            {
+                if (issueDiagnostics)
+                {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type expected as function type parameter.");
+                }
+                else
+                {
+                    p->currentTokenIndex = startIndex;
+                    return false;
+                }
+            }
+
+            layec_location typeLocation = layec_location_combine(startLocation, current->location);
+            laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FUNCTION, typeLocation);
+            newType->functionType.returnType = *typeSyntax;
+            newType->functionType.parameterTypes = parameterTypes;
             *typeSyntax = newType;
             return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
         } break;
@@ -562,6 +627,8 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
     }
 }
 
+static laye_ast_node* laye_parse_expression(laye_parser* p);
+
 static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* expression)
 {
     assert(p != nullptr);
@@ -582,8 +649,35 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
             laye_parser_advance(p);
 
             list(laye_ast_node*) argumentNodes = nullptr;
+            bool endsWithComma = false;
+            while (!laye_parser_is_eof(p) && !laye_parser_check(p, ')'))
+            {
+                endsWithComma = false;
+                if (laye_parser_check(p, ','))
+                {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Type expected as function type parameter.");
+                    laye_parser_advance(p);
+                    continue;
+                }
 
+                laye_ast_node* argument = laye_parse_expression(p);
+                assert(argument != nullptr);
+
+                arrput(argumentNodes, argument);
+
+                if (!laye_parser_check(p, ','))
+                    break;
+                laye_parser_advance(p);
+                endsWithComma = true;
+            }
+
+            current = laye_parser_current(p);
             laye_parser_expect(p, ')', nullptr);
+
+            if (endsWithComma)
+            {
+                layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Expression expected as invocation argument.");
+            }
 
             layec_location location = layec_location_combine(expression->location, laye_parser_most_recent_location(p));
 
@@ -624,6 +718,15 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             return laye_parse_primary_suffix(p, resultNode);
         }
 
+        case LAYE_TOKEN_LITERAL_STRING:
+        {
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_STRING, current->location);
+            assert(resultNode != nullptr);
+            resultNode->literal.stringValue = current->stringValue;
+            laye_parser_advance(p);
+            return laye_parse_primary_suffix(p, resultNode);
+        }
+
         case LAYE_TOKEN_LITERAL_INTEGER:
         {
             laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_INTEGER, current->location);
@@ -636,6 +739,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
         default:
         {
             layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Unexpected token when parsing expression.");
+            laye_parser_advance(p);
             return laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, current->location);
         }
     }
