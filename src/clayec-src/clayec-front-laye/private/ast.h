@@ -80,7 +80,7 @@
     A(EXPRESSION_INVOKE) \
     A(EXPRESSION_TYPECAST) \
     A(EXPRESSION_LOOKUP) \
-    A(EXPRESSION_NAMESPACE_RESOLVE) \
+    A(EXPRESSION_PATH_RESOLVE) \
     A(EXPRESSION_NULLPTR) \
     A(EXPRESSION_TRUE) \
     A(EXPRESSION_FALSE) \
@@ -224,6 +224,11 @@ struct laye_ast_node
         laye_ast_node* returnValue;
 
         string lookupName;
+        struct
+        {
+            list(string) path;
+            bool isHeadless;
+        } lookup;
 
         union
         {

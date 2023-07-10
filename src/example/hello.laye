@@ -1,12 +1,7 @@
 import "numbers.laye";
 
-i32 parse_i32(string input)
-{
-    return 0;
-}
-
 void main(readonly string[] argv)
 {
-    i32(string) parser = parse_i32;
+    i32(string) parser = numbers::parse_i32;
     i32 result = parser("123");
 }

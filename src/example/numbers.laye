@@ -2,3 +2,8 @@ export i32 get_nice_number()
 {
     return 69;
 }
+
+export i32 parse_i32(string input)
+{
+    return 0;
+}

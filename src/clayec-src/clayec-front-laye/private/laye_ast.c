@@ -261,6 +261,25 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, ">");
         } break;
 
+        case LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Path: ");
+            RESETCOLOR;
+            if (node->lookup.isHeadless)
+                fprintf(state.stream, "::");
+            for (usize i = 0, iLen = arrlenu(node->lookup.path); i < iLen; i++)
+            {
+                if (i > 0)
+                    fprintf(state.stream, "::");
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->lookup.path[i]));
+            }
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+
         case LAYE_AST_NODE_EXPRESSION_LOOKUP:
         {
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);

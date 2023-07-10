@@ -706,15 +706,46 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
     laye_token* current = laye_parser_current(p);
     assert(current != nullptr);
 
+    string identifierName = { 0 };
+    bool isPathHeadless = false;
     switch (current->kind)
     {
+        case LAYE_TOKEN_COLON_COLON:
+            isPathHeadless = true;
+            goto start_path_resolution_parse;
         case LAYE_TOKEN_IDENTIFIER:
         {
-            // TODO(local): a::x and a.x, here or in prefix parser
+            identifierName = layec_intern_string_view(p->context, current->atom);
+            laye_parser_advance(p);
+
+            if (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
+            {
+            start_path_resolution_parse:;
+                list(string) path = nullptr;
+                if (!isPathHeadless)
+                {
+                    assert(identifierName.count > 0, "isPathHeadless was false, so TOKEN_IDENTIFIER should've assigned identifierName");
+                    arrput(path, identifierName);
+                }
+
+                while (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
+                {
+                    laye_parser_advance(p);
+                    laye_token* nextIdent = laye_parser_expect_identifier(p, nullptr);
+                    assert(nextIdent != nullptr);
+                    string nextName = layec_intern_string_view(p->context, nextIdent->atom);
+                    arrput(path, nextName);
+                }
+
+                laye_ast_node* pathNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE, current->location);
+                pathNode->lookup.isHeadless = isPathHeadless;
+                pathNode->lookup.path = path;
+                return laye_parse_primary_suffix(p, pathNode);
+            }
+
             laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_LOOKUP, current->location);
             assert(resultNode != nullptr);
-            resultNode->lookupName = layec_intern_string_view(p->context, current->atom);
-            laye_parser_advance(p);
+            resultNode->lookupName = identifierName;
             return laye_parse_primary_suffix(p, resultNode);
         }
 
