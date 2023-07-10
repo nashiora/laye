@@ -153,6 +153,31 @@ typedef struct laye_ast_import
     bool export;
 } laye_ast_import;
 
+typedef enum laye_ast_template_parameter_kind
+{
+    LAYE_TEMPLATE_PARAM_TYPE,
+    LAYE_TEMPLATE_PARAM_VALUE,
+} laye_ast_template_parameter_kind;
+
+typedef enum laye_ast_template_argument_kind
+{
+    LAYE_TEMPLATE_ARG_TYPE,
+    LAYE_TEMPLATE_ARG_VALUE,
+} laye_ast_template_argument_kind;
+
+typedef struct laye_ast_template_parameter
+{
+    laye_ast_template_parameter_kind kind;
+    string name;
+    laye_ast_node* valueType;
+} laye_ast_template_parameter;
+
+typedef struct laye_ast_template_argument
+{
+    laye_ast_template_argument_kind kind;
+    laye_ast_node* value;
+} laye_ast_template_argument;
+
 struct laye_ast_node
 {
     laye_ast_node_kind kind;
@@ -196,6 +221,7 @@ struct laye_ast_node
             list(laye_ast_modifier) modifiers;
             laye_ast_node* returnType;
             string name;
+            list(laye_ast_template_parameter) templateParameters;
             list(laye_ast_node*) parameterBindings;
             laye_ast_node* body;
         } functionDeclaration;
@@ -204,6 +230,7 @@ struct laye_ast_node
         {
             list(laye_ast_modifier) modifiers;
             string name;
+            list(laye_ast_template_parameter) templateParameters;
             list(laye_ast_node*) fieldBindings;
         } structDeclaration;
 
@@ -211,6 +238,7 @@ struct laye_ast_node
         {
             list(laye_ast_modifier) modifiers;
             string name;
+            list(laye_ast_template_parameter) templateParameters;
             list(laye_ast_enum_variant) variants;
         } enumDeclaration;
 
@@ -223,12 +251,18 @@ struct laye_ast_node
         list(laye_ast_node*) statements;
         laye_ast_node* returnValue;
 
-        string lookupName;
+        struct
+        {
+            string name;
+            list(laye_ast_template_argument) templateArguments;
+        } nameLookup;
+
         struct
         {
             list(string) path;
+            list(laye_ast_template_argument) templateArguments;
             bool isHeadless;
-        } lookup;
+        } pathLookup;
 
         union
         {

@@ -79,7 +79,7 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             string_builder_append_cstring(sb, " array]");
         } break;
         
-        case LAYE_AST_NODE_TYPE_NAMED: string_builder_append_string(sb, typeNode->lookupName); break;
+        case LAYE_AST_NODE_TYPE_NAMED: string_builder_append_string(sb, typeNode->nameLookup.name); break;
 
         case LAYE_AST_NODE_TYPE_INFER: string_builder_append_cstring(sb, "var"); break;
         case LAYE_AST_NODE_TYPE_NORETURN: string_builder_append_cstring(sb, "noreturn"); break;
@@ -186,7 +186,7 @@ typedef struct ast_fprint_state
     string_builder* indents;
 } ast_fprint_state;
 
-static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bool isLast)
+static void laye_ast_fprint_name(ast_fprint_state state, string_view name, bool isLast)
 {
     if (state.indents->count > 0)
     {
@@ -194,11 +194,88 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
     }
 
     const char* currentIndent = isLast ? "└ " : "├ ";
-    const char* nestedIndent = isLast ? "  " : "│ ";
 
     fprintf(state.stream, "%s", currentIndent);
     PUTCOLOR(ANSI_COLOR_RED);
-    fprintf(state.stream, STRING_VIEW_FORMAT, STRING_VIEW_EXPAND(laye_ast_node_kind_name(node->kind)));
+    fprintf(state.stream, STRING_VIEW_FORMAT, STRING_VIEW_EXPAND(name));
+    RESETCOLOR;
+}
+
+static void laye_ast_fprint_template_parameter(ast_fprint_state state, laye_ast_template_parameter param, bool isLast)
+{
+    laye_ast_fprint_name(state, STRING_VIEW_LITERAL("TEMPLATE_PARAMETER"), isLast);
+
+    switch (param.kind)
+    {
+        default: break;
+        case LAYE_TEMPLATE_PARAM_VALUE:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Type: ");
+            RESETCOLOR;
+            string typeString = laye_ast_node_type_to_string(param.valueType);
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeString));
+            string_deallocate(typeString);
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } // fallthrough;
+
+        case LAYE_TEMPLATE_PARAM_TYPE:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Name: ");
+            RESETCOLOR;
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(param.name));
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+    }
+
+    RESETCOLOR;
+    fprintf(state.stream, "\n");
+}
+
+static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bool isLast);
+
+static void laye_ast_fprint_template_argument(ast_fprint_state state, laye_ast_template_argument arg, bool isLast)
+{
+    laye_ast_fprint_name(state, STRING_VIEW_LITERAL("TEMPLATE_ARGUMENT"), isLast);
+
+    switch (arg.kind)
+    {
+        default: break;
+        case LAYE_TEMPLATE_PARAM_VALUE:
+        {
+            laye_ast_fprint_node(state, arg.value, true);
+        } break;
+
+        case LAYE_TEMPLATE_PARAM_TYPE:
+        {
+            laye_ast_fprint_name(state, STRING_VIEW_LITERAL("TYPE_PARAMETER"), isLast);
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Name: ");
+            RESETCOLOR;
+            string typeString = laye_ast_node_type_to_string(arg.value);
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeString));
+            string_deallocate(typeString);
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+    }
+
+    RESETCOLOR;
+    fprintf(state.stream, "\n");
+}
+
+static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bool isLast)
+{
+    laye_ast_fprint_name(state, laye_ast_node_kind_name(node->kind), isLast);
 
     switch (node->kind)
     {
@@ -222,6 +299,18 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeString));
             string_deallocate(typeString);
 
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+
+        case LAYE_AST_NODE_STRUCT_DECLARATION:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Name: ");
+            RESETCOLOR;
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->structDeclaration.name));
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
@@ -268,13 +357,13 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             PUTCOLOR(ANSI_COLOR_BLUE);
             fprintf(state.stream, "Path: ");
             RESETCOLOR;
-            if (node->lookup.isHeadless)
+            if (node->pathLookup.isHeadless)
                 fprintf(state.stream, "::");
-            for (usize i = 0, iLen = arrlenu(node->lookup.path); i < iLen; i++)
+            for (usize i = 0, iLen = arrlenu(node->pathLookup.path); i < iLen; i++)
             {
                 if (i > 0)
                     fprintf(state.stream, "::");
-                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->lookup.path[i]));
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->pathLookup.path[i]));
             }
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
@@ -287,7 +376,7 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             PUTCOLOR(ANSI_COLOR_BLUE);
             fprintf(state.stream, "Name: ");
             RESETCOLOR;
-            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->lookupName));
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->nameLookup.name));
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
@@ -321,7 +410,7 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
     fprintf(state.stream, "\n");
 
     usize lastStringBuilderCount = state.indents->count;
-    string_builder_append_cstring(state.indents, nestedIndent);
+    string_builder_append_cstring(state.indents, isLast ? "  " : "│ ");
 
     switch (node->kind)
     {
@@ -329,10 +418,27 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
 
         case LAYE_AST_NODE_FUNCTION_DECLARATION:
         {
+            usize templateParamsLen = arrlenu(node->functionDeclaration.templateParameters);
+
+            for (usize i = 0; i < templateParamsLen; i++)
+                laye_ast_fprint_template_parameter(state, node->functionDeclaration.templateParameters[i], i == templateParamsLen - 1 && node->functionDeclaration.body == nullptr);
+
             if (node->functionDeclaration.body != nullptr)
             {
                 laye_ast_fprint_node(state, node->functionDeclaration.body, true);
             }
+        } break;
+
+        case LAYE_AST_NODE_STRUCT_DECLARATION:
+        {
+            usize templateParamsLen = arrlenu(node->structDeclaration.templateParameters);
+            usize fieldsLen = arrlenu(node->structDeclaration.fieldBindings);
+
+            for (usize i = 0; i < templateParamsLen; i++)
+                laye_ast_fprint_template_parameter(state, node->structDeclaration.templateParameters[i], i == templateParamsLen - 1 && fieldsLen == 0);
+
+            for (usize i = 0; i < fieldsLen; i++)
+                laye_ast_fprint_node(state, node->structDeclaration.fieldBindings[i], i == fieldsLen - 1);
         } break;
 
         case LAYE_AST_NODE_BINDING_DECLARATION:
@@ -398,9 +504,7 @@ void laye_ast_fprint(FILE* stream, layec_context* context, laye_ast* ast, bool c
     {
         laye_ast_import import = ast->imports[i];
         bool isLast = i == importCount - 1 && topLevelNodeCount == 0;
-        fprintf(state.stream, "%s", isLast ? "└ " : "├ ");
-        PUTCOLOR(ANSI_COLOR_RED);
-        fprintf(stream, "IMPORT");
+        laye_ast_fprint_name(state, STRING_VIEW_LITERAL("IMPORT"), isLast);
         PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
         fprintf(state.stream, " <");
         PUTCOLOR(ANSI_COLOR_BLUE);

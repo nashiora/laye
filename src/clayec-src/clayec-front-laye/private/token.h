@@ -34,8 +34,10 @@
     T(IX, "<sized signed integer type name>") \
     T(UX, "<sized unsigned integer type name>") \
     T(FX, "<sized floating point type name>") \
+    K(CONTEXT, "context") \
     K(TRUE, "true") \
     K(FALSE, "false") \
+    K(NULLPTR, "nullptr") \
     K(IF, "if") \
     K(THEN, "then") \
     K(ELSE, "else") \

@@ -27,5 +27,6 @@ typedef struct layec_location
 } layec_location;
 
 layec_location layec_location_combine(layec_location a, layec_location b);
+bool layec_location_immediately_follows(layec_location a, layec_location b);
 
 #endif // LAYEC_DIAGNOSTIC_H

@@ -24,3 +24,8 @@ layec_location layec_location_combine(layec_location a, layec_location b)
         .length = endOffset - startOffset,
     };
 }
+
+bool layec_location_immediately_follows(layec_location a, layec_location b)
+{
+    return a.offset + a.length == b.offset;
+}

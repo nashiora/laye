@@ -194,7 +194,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
             token->location = lexer_location(l, startPosition);
             token->atom = layec_view_from_location(l->context, token->location);
 
-            if (areAllSubsequentCharactersDigits)
+            if (areAllSubsequentCharactersDigits && token->atom.count > 1)
             {
                 if (isSizedTypeParamterOutOfRange)
                 {

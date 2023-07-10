@@ -1,5 +1,16 @@
 import "numbers.laye";
 
+struct vec<T, i32 N>
+{
+    T[N] data;
+}
+
+struct list<T>
+{
+    allocator allocator;
+    T[*] values;
+}
+
 void main(readonly string[] argv)
 {
     i32(string) parser = numbers::parse_i32;
