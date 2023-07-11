@@ -310,6 +310,7 @@ struct laye_ast_node
 
         struct
         {
+            laye_ast_node* allocator;
             laye_ast_node* type;
             list(laye_ast_constructor_value) values;
         } new;

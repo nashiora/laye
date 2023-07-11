@@ -1031,6 +1031,14 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             layec_location startLocation = current->location;
             laye_parser_advance(p);
 
+            laye_ast_node* allocator = nullptr;
+            if (laye_parser_check(p, '('))
+            {
+                laye_parser_advance(p);
+                allocator = laye_parse_expression(p);
+                laye_parser_expect(p, ')', nullptr);
+            }
+
             laye_ast_node* typeNode = nullptr;
             bool typeSuccess = laye_parser_try_parse_type(p, &typeNode, true);
             assert(typeSuccess);
@@ -1046,6 +1054,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
 
             layec_location location = layec_location_combine(startLocation, lastLocation);
             laye_ast_node* newNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_NEW, location);
+            newNode->new.allocator = allocator;
             newNode->new.type = typeNode;
             newNode->new.values = values;
 

@@ -706,7 +706,8 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         case LAYE_AST_NODE_EXPRESSION_NEW:
         {
             usize fieldsLen = arrlenu(node->new.values);
-
+            if (node->new.allocator != nullptr)
+                laye_ast_fprint_node(state, node->new.allocator, fieldsLen == 0);
             for (usize i = 0; i < fieldsLen; i++)
                 laye_ast_fprint_constructor_value(state, node->new.values[i], i == fieldsLen - 1);
         } break;
