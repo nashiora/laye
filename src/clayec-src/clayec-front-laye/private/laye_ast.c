@@ -103,26 +103,19 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             string_builder_append_uint(sb, arrlenu(typeNode->containerType.ranks));
             string_builder_append_cstring(sb, " array]");
         } break;
-        
+
         case LAYE_AST_NODE_TYPE_NAMED:
         {
-            string_builder_append_string(sb, typeNode->nameLookup.name);
-            if (arrlenu(typeNode->nameLookup.templateArguments) > 0)
-                template_args_to_string_builder(typeNode->nameLookup.templateArguments, sb);
-        } break;
-
-        case LAYE_AST_NODE_TYPE_PATH_RESOLVE:
-        {
-            if (typeNode->pathLookup.isHeadless)
+            if (typeNode->lookupType.isHeadless)
                 string_builder_append_cstring(sb, "::");
-            for (usize i = 0, iLen = arrlenu(typeNode->pathLookup.path); i < iLen; i++)
+            for (usize i = 0, iLen = arrlenu(typeNode->lookupType.path); i < iLen; i++)
             {
                 if (i > 0)
                     string_builder_append_cstring(sb, "::");
-                string_builder_append_string(sb, typeNode->pathLookup.path[i]);
+                string_builder_append_string(sb, typeNode->lookupType.path[i]);
             }
-            if (arrlenu(typeNode->pathLookup.templateArguments) > 0)
-                template_args_to_string_builder(typeNode->pathLookup.templateArguments, sb);
+            if (arrlenu(typeNode->lookupType.templateArguments) > 0)
+                template_args_to_string_builder(typeNode->lookupType.templateArguments, sb);
         } break;
 
         case LAYE_AST_NODE_TYPE_INFER: string_builder_append_cstring(sb, "var"); break;
@@ -496,33 +489,21 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, ">");
         } break;
 
-        case LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE:
+        case LAYE_AST_NODE_EXPRESSION_LOOKUP:
         {
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, " <");
             PUTCOLOR(ANSI_COLOR_BLUE);
             fprintf(state.stream, "Path: ");
             RESETCOLOR;
-            if (node->pathLookup.isHeadless)
+            if (node->lookupType.isHeadless)
                 fprintf(state.stream, "::");
-            for (usize i = 0, iLen = arrlenu(node->pathLookup.path); i < iLen; i++)
+            for (usize i = 0, iLen = arrlenu(node->lookupType.path); i < iLen; i++)
             {
                 if (i > 0)
                     fprintf(state.stream, "::");
-                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->pathLookup.path[i]));
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->lookupType.path[i]));
             }
-            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
-            fprintf(state.stream, ">");
-        } break;
-
-        case LAYE_AST_NODE_EXPRESSION_LOOKUP:
-        {
-            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
-            fprintf(state.stream, " <");
-            PUTCOLOR(ANSI_COLOR_BLUE);
-            fprintf(state.stream, "Name: ");
-            RESETCOLOR;
-            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->nameLookup.name));
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
@@ -566,36 +547,21 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         case LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR:
         {
             laye_ast_node* typeNode = node->constructor.typeName;
-            if (typeNode->kind == LAYE_AST_NODE_TYPE_PATH_RESOLVE)
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Path: ");
+            RESETCOLOR;
+            if (typeNode->lookupType.isHeadless)
+                fprintf(state.stream, "::");
+            for (usize i = 0, iLen = arrlenu(typeNode->lookupType.path); i < iLen; i++)
             {
-                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
-                fprintf(state.stream, " <");
-                PUTCOLOR(ANSI_COLOR_BLUE);
-                fprintf(state.stream, "Path: ");
-                RESETCOLOR;
-                if (typeNode->pathLookup.isHeadless)
+                if (i > 0)
                     fprintf(state.stream, "::");
-                for (usize i = 0, iLen = arrlenu(typeNode->pathLookup.path); i < iLen; i++)
-                {
-                    if (i > 0)
-                        fprintf(state.stream, "::");
-                    fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeNode->pathLookup.path[i]));
-                }
-                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
-                fprintf(state.stream, ">");
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeNode->lookupType.path[i]));
             }
-            else
-            {
-                assert(typeNode->kind == LAYE_AST_NODE_TYPE_NAMED);
-                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
-                fprintf(state.stream, " <");
-                PUTCOLOR(ANSI_COLOR_BLUE);
-                fprintf(state.stream, "Name: ");
-                RESETCOLOR;
-                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeNode->nameLookup.name));
-                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
-                fprintf(state.stream, ">");
-            }
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
         } break;
 
         case LAYE_AST_NODE_EXPRESSION_NEW:

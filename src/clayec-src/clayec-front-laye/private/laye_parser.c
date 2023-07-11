@@ -688,6 +688,8 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
     laye_token* current = laye_parser_current(p);
     assert(current != nullptr);
 
+    layec_location startLocation = current->location;
+
     #define WORD_TYPE(TK, TY, SX) \
         case LAYE_TOKEN_ ## TK: \
         { \
@@ -702,8 +704,8 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics); \
         }
 
+    list(string) path = nullptr;
     string identifierName = { 0 };
-    list(laye_ast_template_argument) templateArguments = nullptr;
     bool isPathHeadless = false;
     switch (current->kind)
     {
@@ -714,19 +716,11 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         {
             identifierName = layec_intern_location_text(p->context, current->location);
             laye_parser_advance(p);
+            arrput(path, identifierName);
             
-            list(laye_ast_template_argument) templateArguments = nullptr;
-
             if (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
             {
             start_path_resolution_parse:;
-                list(string) path = nullptr;
-                if (!isPathHeadless)
-                {
-                    assert(identifierName.count > 0, "isPathHeadless was false, so TOKEN_IDENTIFIER should've assigned identifierName");
-                    arrput(path, identifierName);
-                }
-
                 layec_location lastIdentifierLocation = { 0 };
                 while (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
                 {
@@ -735,31 +729,22 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                     assert(nextIdent != nullptr);
                     lastIdentifierLocation = nextIdent->location;
                     string nextName = layec_intern_location_text(p->context, nextIdent->location);
+                    startLocation = layec_location_combine(startLocation, nextIdent->location);
                     arrput(path, nextName);
                 }
-
-                if (laye_parser_check(p, '<') && layec_location_immediately_follows(lastIdentifierLocation, laye_parser_current(p)->location))
-                {
-                    templateArguments = laye_parse_template_arguments(p);
-                }
-
-                laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_PATH_RESOLVE, current->location);
-                type->pathLookup.path = path;
-                type->pathLookup.templateArguments = templateArguments;
-                type->pathLookup.isHeadless = isPathHeadless;
-                *outTypeSyntax = type;
-                return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics);
             }
 
+            list(laye_ast_template_argument) templateArguments = nullptr;
             if (laye_parser_check(p, '<') && layec_location_immediately_follows(current->location, laye_parser_current(p)->location))
             {
                 templateArguments = laye_parse_template_arguments(p);
             }
 
-            laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NAMED, current->location);
+            laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NAMED, startLocation);
             assert(type != nullptr);
-            type->nameLookup.name = identifierName;
-            type->nameLookup.templateArguments = templateArguments;
+            type->lookupType.path = path;
+            type->lookupType.templateArguments = templateArguments;
+            type->lookupType.isHeadless = isPathHeadless;
             *outTypeSyntax = type;
             return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics);
         }
@@ -933,13 +918,7 @@ static laye_ast_node* laye_parse_identifier_suffix(laye_parser* p, laye_ast_node
             layec_location lastLocation = { 0 };
             list(laye_ast_constructor_value) values = laye_parse_constructor(p, &lastLocation);
 
-            if (expression->kind == LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE)
-                expression->kind = LAYE_AST_NODE_TYPE_PATH_RESOLVE;
-            else
-            {
-                assert(expression->kind == LAYE_AST_NODE_EXPRESSION_LOOKUP);
-                expression->kind = LAYE_AST_NODE_TYPE_NAMED;
-            }
+            expression->kind = LAYE_AST_NODE_TYPE_NAMED;
 
             layec_location location = layec_location_combine(expression->location, lastLocation);
             laye_ast_node* constructorNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR, location);
@@ -966,7 +945,9 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
 
     laye_token* current = laye_parser_current(p);
     assert(current != nullptr);
+    layec_location startLocation = current->location;
 
+    list(string) path = nullptr;
     string identifierName = { 0 };
     bool isPathHeadless = false;
     switch (current->kind)
@@ -978,19 +959,11 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
         {
             identifierName = layec_intern_location_text(p->context, current->location);
             laye_parser_advance(p);
-            
-            list(laye_ast_template_argument) templateArguments = nullptr;
+            arrput(path, identifierName);
 
             if (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
             {
             start_path_resolution_parse:;
-                list(string) path = nullptr;
-                if (!isPathHeadless)
-                {
-                    assert(identifierName.count > 0, "isPathHeadless was false, so TOKEN_IDENTIFIER should've assigned identifierName");
-                    arrput(path, identifierName);
-                }
-
                 layec_location lastIdentifierLocation = { 0 };
                 while (laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
                 {
@@ -999,30 +972,22 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
                     assert(nextIdent != nullptr);
                     lastIdentifierLocation = nextIdent->location;
                     string nextName = layec_intern_location_text(p->context, nextIdent->location);
+                    startLocation = layec_location_combine(startLocation, nextIdent->location);
                     arrput(path, nextName);
                 }
-
-                if (laye_parser_check(p, '<') && layec_location_immediately_follows(lastIdentifierLocation, laye_parser_current(p)->location))
-                {
-                    templateArguments = laye_parse_template_arguments(p);
-                }
-
-                laye_ast_node* pathNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE, current->location);
-                pathNode->pathLookup.path = path;
-                pathNode->pathLookup.templateArguments = templateArguments;
-                pathNode->pathLookup.isHeadless = isPathHeadless;
-                return laye_parse_identifier_suffix(p, pathNode);
             }
 
+            list(laye_ast_template_argument) templateArguments = nullptr;
             if (laye_parser_check(p, '<') && layec_location_immediately_follows(current->location, laye_parser_current(p)->location))
             {
                 templateArguments = laye_parse_template_arguments(p);
             }
 
-            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_LOOKUP, current->location);
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_LOOKUP, startLocation);
             assert(resultNode != nullptr);
-            resultNode->nameLookup.name = identifierName;
-            resultNode->nameLookup.templateArguments = templateArguments;
+            resultNode->lookup.path = path;
+            resultNode->lookup.templateArguments = templateArguments;
+            resultNode->lookup.isHeadless = isPathHeadless;
             return laye_parse_identifier_suffix(p, resultNode);
         }
 
@@ -1047,7 +1012,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             list(laye_ast_constructor_value) values = nullptr;
             layec_location lastLocation = typeNode->location;
 
-            if ((typeNode->kind == LAYE_AST_NODE_TYPE_NAMED || typeNode->kind == LAYE_AST_NODE_TYPE_PATH_RESOLVE) && laye_parser_check(p, '{'))
+            if (typeNode->kind == LAYE_AST_NODE_TYPE_NAMED && laye_parser_check(p, '{'))
             {
                 values = laye_parse_constructor(p, &lastLocation);
             }

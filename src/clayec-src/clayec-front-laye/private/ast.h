@@ -13,7 +13,6 @@
     T(ERROR) \
     T(INFER) \
     T(NAMED) \
-    T(PATH_RESOLVE) \
     T(ARRAY) \
     T(SLICE) \
     T(POINTER) \
@@ -81,7 +80,6 @@
     A(EXPRESSION_INVOKE) \
     A(EXPRESSION_TYPECAST) \
     A(EXPRESSION_LOOKUP) \
-    A(EXPRESSION_PATH_RESOLVE) \
     A(EXPRESSION_CONSTRUCTOR) \
     A(EXPRESSION_NEW) \
     A(EXPRESSION_NULLPTR) \
@@ -207,6 +205,7 @@ struct laye_ast_node
             laye_ast_type_access access;
             // for arbitrary-sized primitive types like i32
             int size;
+            bool nilable;
         } primitiveType;
 
         // for container types like pointers or arrays
@@ -216,12 +215,22 @@ struct laye_ast_node
             laye_ast_node* elementType;
             // array dimension expressions
             list(laye_ast_node*) ranks;
+            bool nilable;
         } containerType;
+
+        struct
+        {
+            list(string) path;
+            list(laye_ast_template_argument) templateArguments;
+            bool isHeadless;
+            bool nilable;
+        } lookupType;
 
         struct
         {
             laye_ast_node* returnType;
             list(laye_ast_node*) parameterTypes;
+            bool nilable;
         } functionType;
 
         struct
@@ -270,16 +279,10 @@ struct laye_ast_node
 
         struct
         {
-            string name;
-            list(laye_ast_template_argument) templateArguments;
-        } nameLookup;
-
-        struct
-        {
             list(string) path;
             list(laye_ast_template_argument) templateArguments;
             bool isHeadless;
-        } pathLookup;
+        } lookup;
 
         union
         {
