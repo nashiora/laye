@@ -319,7 +319,6 @@ static laye_token* lexer_get_token(laye_lexer* l)
                         break;
                 }
 
-                free(token);
                 return lexer_get_token(l);
             }
             else if (c == '*')
@@ -347,7 +346,6 @@ static laye_token* lexer_get_token(laye_lexer* l)
                     layec_issue_diagnostic(l->context, SEV_ERROR, location, "unfinished delimited comment in Laye source file (%d open delimiter(s) went unclosed.)", delimiterCount);
                 }
 
-                free(token);
                 return lexer_get_token(l);
             }
 
