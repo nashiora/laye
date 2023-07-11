@@ -385,6 +385,28 @@ static void laye_ast_fprint_enum_variant(ast_fprint_state state, laye_ast_enum_v
     }
 }
 
+static void laye_ast_fprint_constructor_value(ast_fprint_state state, laye_ast_constructor_value value, bool isLast)
+{
+    laye_ast_fprint_name(state, STRING_VIEW_LITERAL("FIELD_ASSIGN"), isLast);
+
+    PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+    fprintf(state.stream, " <");
+    PUTCOLOR(ANSI_COLOR_BLUE);
+    fprintf(state.stream, "Name: ");
+    RESETCOLOR;
+    fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(value.name));
+    PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+    fprintf(state.stream, ">");
+
+    RESETCOLOR;
+    fprintf(state.stream, "\n");
+    
+    usize lastStringBuilderCount = state.indents->count;
+    string_builder_append_cstring(state.indents, isLast ? "  " : "│ ");
+    laye_ast_fprint_node(state, value.value, true);
+    string_builder_set_count(state.indents, lastStringBuilderCount);
+}
+
 static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bool isLast)
 {
     laye_ast_fprint_name(state, laye_ast_node_kind_name(node->kind), isLast);
@@ -540,6 +562,41 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
+
+        case LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR:
+        {
+            laye_ast_node* typeNode = node->constructor.typeName;
+            if (typeNode->kind == LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE)
+            {
+                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                fprintf(state.stream, " <");
+                PUTCOLOR(ANSI_COLOR_BLUE);
+                fprintf(state.stream, "Path: ");
+                RESETCOLOR;
+                if (typeNode->pathLookup.isHeadless)
+                    fprintf(state.stream, "::");
+                for (usize i = 0, iLen = arrlenu(typeNode->pathLookup.path); i < iLen; i++)
+                {
+                    if (i > 0)
+                        fprintf(state.stream, "::");
+                    fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeNode->pathLookup.path[i]));
+                }
+                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                fprintf(state.stream, ">");
+            }
+            else
+            {
+                assert(typeNode->kind == LAYE_AST_NODE_EXPRESSION_LOOKUP);
+                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                fprintf(state.stream, " <");
+                PUTCOLOR(ANSI_COLOR_BLUE);
+                fprintf(state.stream, "Name: ");
+                RESETCOLOR;
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeNode->nameLookup.name));
+                PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                fprintf(state.stream, ">");
+            }
+        } break;
     }
 
     RESETCOLOR;
@@ -623,6 +680,13 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         {
             laye_ast_fprint_node(state, node->binary.lhs, false);
             laye_ast_fprint_node(state, node->binary.rhs, true);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR:
+        {
+            usize fieldsLen = arrlenu(node->constructor.values);
+            for (usize i = 0; i < fieldsLen; i++)
+                laye_ast_fprint_constructor_value(state, node->constructor.values[i], i == fieldsLen - 1);
         } break;
     }
 

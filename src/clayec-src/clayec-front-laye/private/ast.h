@@ -82,6 +82,7 @@
     A(EXPRESSION_TYPECAST) \
     A(EXPRESSION_LOOKUP) \
     A(EXPRESSION_PATH_RESOLVE) \
+    A(EXPRESSION_CONSTRUCTOR) \
     A(EXPRESSION_NULLPTR) \
     A(EXPRESSION_TRUE) \
     A(EXPRESSION_FALSE) \
@@ -140,6 +141,12 @@ typedef struct laye_ast_enum_variant
     string name;
     laye_ast_node* value;
 } laye_ast_enum_variant;
+
+typedef struct laye_ast_constructor_value
+{
+    string name;
+    laye_ast_node* value;
+} laye_ast_constructor_value;
 
 typedef struct laye_ast_import
 {
@@ -292,6 +299,13 @@ struct laye_ast_node
             laye_token_kind operatorKind;
             string operatorString;
         } binary;
+
+        struct
+        {
+            // can be either a name or a path
+            laye_ast_node* typeName;
+            list(laye_ast_constructor_value) values;
+        } constructor;
     };
 };
 

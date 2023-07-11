@@ -35,4 +35,7 @@ void main(readonly string[] argv)
 {
     i32(string) parser = numbers::parse_i32;
     i32 result = parser("123");
+    token name = token::string_literal {
+        value = "Local",
+    };
 }
