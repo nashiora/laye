@@ -597,6 +597,20 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
                 fprintf(state.stream, ">");
             }
         } break;
+
+        case LAYE_AST_NODE_EXPRESSION_NEW:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Type: ");
+            RESETCOLOR;
+            string typeString = laye_ast_node_type_to_string(node->new.type);
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeString));
+            string_deallocate(typeString);
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
     }
 
     RESETCOLOR;
@@ -687,6 +701,14 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             usize fieldsLen = arrlenu(node->constructor.values);
             for (usize i = 0; i < fieldsLen; i++)
                 laye_ast_fprint_constructor_value(state, node->constructor.values[i], i == fieldsLen - 1);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_NEW:
+        {
+            usize fieldsLen = arrlenu(node->new.values);
+
+            for (usize i = 0; i < fieldsLen; i++)
+                laye_ast_fprint_constructor_value(state, node->new.values[i], i == fieldsLen - 1);
         } break;
     }
 

@@ -92,6 +92,8 @@
     K(C_DOUBLE, "c_double") \
     K(C_LONGDOUBLE, "c_longdouble") \
     K(C_BOOL, "c_bool") \
+    K(NEW, "new") \
+    K(DELETE, "delete") \
     K(CAST, "cast") \
     K(DISCARD, "discard") \
     K(SIZEOF, "sizeof") \

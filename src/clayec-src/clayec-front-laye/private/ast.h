@@ -83,6 +83,7 @@
     A(EXPRESSION_LOOKUP) \
     A(EXPRESSION_PATH_RESOLVE) \
     A(EXPRESSION_CONSTRUCTOR) \
+    A(EXPRESSION_NEW) \
     A(EXPRESSION_NULLPTR) \
     A(EXPRESSION_TRUE) \
     A(EXPRESSION_FALSE) \
@@ -306,6 +307,12 @@ struct laye_ast_node
             laye_ast_node* typeName;
             list(laye_ast_constructor_value) values;
         } constructor;
+
+        struct
+        {
+            laye_ast_node* type;
+            list(laye_ast_constructor_value) values;
+        } new;
     };
 };
 

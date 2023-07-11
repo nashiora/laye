@@ -38,4 +38,7 @@ void main(readonly string[] argv)
     token name = token::string_literal {
         value = "Local",
     };
+    token name2 = new ::string_literal {
+        value = "Lensor",
+    };
 }

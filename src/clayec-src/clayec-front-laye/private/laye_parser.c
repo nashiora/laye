@@ -876,6 +876,43 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
     return expression;
 }
 
+static list(laye_ast_constructor_value) laye_parse_constructor(laye_parser* p, layec_location* lastLocation)
+{
+    assert(p != nullptr);
+    assert(laye_parser_check(p, '{'));
+
+    laye_parser_advance(p);
+
+    list(laye_ast_constructor_value) values = nullptr;
+    while (!laye_parser_is_eof(p) && !laye_parser_check(p, '}'))
+    {
+        laye_token* valueNameToken = laye_parser_expect_identifier(p, nullptr);
+        string valueName = layec_intern_location_text(p->context, valueNameToken->location);
+
+        laye_parser_expect(p, '=', nullptr);
+
+        laye_ast_node* value = laye_parse_expression(p);
+
+        laye_ast_constructor_value ctorValue = {
+            .name = valueName,
+            .value = value,
+        };
+        arrput(values, ctorValue);
+
+        if (!laye_parser_check(p, ','))
+            break;
+        
+        laye_parser_advance(p);
+    }
+
+    laye_token* lastToken = nullptr;
+    laye_parser_expect_out(p, '}', nullptr, &lastToken);
+    assert(lastToken != nullptr);
+
+    if (lastLocation) *lastLocation = lastToken->location;
+    return values;
+}
+
 static laye_ast_node* laye_parse_identifier_suffix(laye_parser* p, laye_ast_node* expression)
 {
     assert(p != nullptr);
@@ -893,33 +930,8 @@ static laye_ast_node* laye_parse_identifier_suffix(laye_parser* p, laye_ast_node
 
         case '{':
         {
-            laye_parser_advance(p);
-
-            list(laye_ast_constructor_value) values = nullptr;
-            while (!laye_parser_is_eof(p) && !laye_parser_check(p, '}'))
-            {
-                laye_token* valueNameToken = laye_parser_expect_identifier(p, nullptr);
-                string valueName = layec_intern_location_text(p->context, valueNameToken->location);
-
-                laye_parser_expect(p, '=', nullptr);
-
-                laye_ast_node* value = laye_parse_expression(p);
-
-                laye_ast_constructor_value ctorValue = {
-                    .name = valueName,
-                    .value = value,
-                };
-                arrput(values, ctorValue);
-
-                if (!laye_parser_check(p, ','))
-                    break;
-                
-                laye_parser_advance(p);
-            }
-
-            laye_token* lastToken = nullptr;
-            laye_parser_expect_out(p, '}', nullptr, &lastToken);
-            assert(lastToken != nullptr);
+            layec_location lastLocation = { 0 };
+            list(laye_ast_constructor_value) values = laye_parse_constructor(p, &lastLocation);
 
             if (expression->kind == LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE)
                 expression->kind = LAYE_AST_NODE_TYPE_PATH_RESOLVE;
@@ -929,7 +941,7 @@ static laye_ast_node* laye_parse_identifier_suffix(laye_parser* p, laye_ast_node
                 expression->kind = LAYE_AST_NODE_TYPE_NAMED;
             }
 
-            layec_location location = layec_location_combine(expression->location, lastToken->location);
+            layec_location location = layec_location_combine(expression->location, lastLocation);
             laye_ast_node* constructorNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR, location);
             constructorNode->constructor.typeName = expression;
             constructorNode->constructor.values = values;
@@ -1012,6 +1024,32 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             resultNode->nameLookup.name = identifierName;
             resultNode->nameLookup.templateArguments = templateArguments;
             return laye_parse_identifier_suffix(p, resultNode);
+        }
+
+        case LAYE_TOKEN_NEW:
+        {
+            layec_location startLocation = current->location;
+            laye_parser_advance(p);
+
+            laye_ast_node* typeNode = nullptr;
+            bool typeSuccess = laye_parser_try_parse_type(p, &typeNode, true);
+            assert(typeSuccess);
+            assert(typeNode != nullptr);
+
+            list(laye_ast_constructor_value) values = nullptr;
+            layec_location lastLocation = typeNode->location;
+
+            if ((typeNode->kind == LAYE_AST_NODE_TYPE_NAMED || typeNode->kind == LAYE_AST_NODE_TYPE_PATH_RESOLVE) && laye_parser_check(p, '{'))
+            {
+                values = laye_parse_constructor(p, &lastLocation);
+            }
+
+            layec_location location = layec_location_combine(startLocation, lastLocation);
+            laye_ast_node* newNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_NEW, location);
+            newNode->new.type = typeNode;
+            newNode->new.values = values;
+
+            return newNode;
         }
 
         case LAYE_TOKEN_LITERAL_STRING:
