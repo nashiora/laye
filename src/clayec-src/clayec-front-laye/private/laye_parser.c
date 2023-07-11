@@ -921,6 +921,14 @@ static laye_ast_node* laye_parse_identifier_suffix(laye_parser* p, laye_ast_node
             laye_parser_expect_out(p, '}', nullptr, &lastToken);
             assert(lastToken != nullptr);
 
+            if (expression->kind == LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE)
+                expression->kind = LAYE_AST_NODE_TYPE_PATH_RESOLVE;
+            else
+            {
+                assert(expression->kind == LAYE_AST_NODE_EXPRESSION_LOOKUP);
+                expression->kind = LAYE_AST_NODE_TYPE_NAMED;
+            }
+
             layec_location location = layec_location_combine(expression->location, lastToken->location);
             laye_ast_node* constructorNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR, location);
             constructorNode->constructor.typeName = expression;

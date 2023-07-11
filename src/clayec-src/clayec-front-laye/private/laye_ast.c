@@ -566,7 +566,7 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         case LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR:
         {
             laye_ast_node* typeNode = node->constructor.typeName;
-            if (typeNode->kind == LAYE_AST_NODE_EXPRESSION_PATH_RESOLVE)
+            if (typeNode->kind == LAYE_AST_NODE_TYPE_PATH_RESOLVE)
             {
                 PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
                 fprintf(state.stream, " <");
@@ -586,7 +586,7 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             }
             else
             {
-                assert(typeNode->kind == LAYE_AST_NODE_EXPRESSION_LOOKUP);
+                assert(typeNode->kind == LAYE_AST_NODE_TYPE_NAMED);
                 PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
                 fprintf(state.stream, " <");
                 PUTCOLOR(ANSI_COLOR_BLUE);
