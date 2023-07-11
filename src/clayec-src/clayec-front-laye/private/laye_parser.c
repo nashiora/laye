@@ -468,15 +468,24 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
         access = LAYE_AST_ACCESS_WRITEONLY;
     }
 
+    bool isNilable = false;
     switch (current->kind)
     {
         case '*':
         {
             layec_location typeLocation = layec_location_combine(startLocation, current->location);
             laye_parser_advance(p);
+
+            if (laye_parser_check(p, '?'))
+            {
+                laye_parser_advance(p);
+                isNilable = true;
+            }
+
             laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_POINTER, typeLocation);
             newType->containerType.elementType = *typeSyntax;
             newType->containerType.access = access;
+            newType->containerType.isNilable = isNilable;
             *typeSyntax = newType;
             return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
         } break;
@@ -494,11 +503,18 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
                     laye_parser_advance(p);
                     current = laye_parser_current(p);
                     laye_parser_advance(p); // ']'
+
+                    if (laye_parser_check(p, '?'))
+                    {
+                        laye_parser_advance(p);
+                        isNilable = true;
+                    }
                     
                     layec_location typeLocation = layec_location_combine(startLocation, current->location);
                     laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_BUFFER, typeLocation);
                     newType->containerType.elementType = *typeSyntax;
                     newType->containerType.access = access;
+                    newType->containerType.isNilable = isNilable;
                     *typeSyntax = newType;
                     return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
                 }
@@ -532,11 +548,18 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
 
                     laye_parser_expect(p, ']', nullptr);
 
+                    if (laye_parser_check(p, '?'))
+                    {
+                        laye_parser_advance(p);
+                        isNilable = true;
+                    }
+
                     layec_location typeLocation = layec_location_combine(startLocation, current->location);
                     laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ARRAY, typeLocation);
                     newType->containerType.elementType = *typeSyntax;
                     newType->containerType.ranks = ranks;
                     newType->containerType.access = access;
+                    newType->containerType.isNilable = isNilable;
                     *typeSyntax = newType;
                     return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
                 }
@@ -555,10 +578,17 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             current = laye_parser_current(p);
             laye_parser_advance(p); // ']'
 
+            if (laye_parser_check(p, '?'))
+            {
+                laye_parser_advance(p);
+                isNilable = true;
+            }
+
             layec_location typeLocation = layec_location_combine(startLocation, current->location);
             laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_SLICE, typeLocation);
             newType->containerType.elementType = *typeSyntax;
             newType->containerType.access = access;
+            newType->containerType.isNilable = isNilable;
             *typeSyntax = newType;
             return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
         } break;
@@ -618,10 +648,17 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
                 }
             }
 
+            if (laye_parser_check(p, '?'))
+            {
+                laye_parser_advance(p);
+                isNilable = true;
+            }
+
             layec_location typeLocation = layec_location_combine(startLocation, current->location);
             laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FUNCTION, typeLocation);
             newType->functionType.returnType = *typeSyntax;
             newType->functionType.parameterTypes = parameterTypes;
+            newType->functionType.isNilable = isNilable;
             *typeSyntax = newType;
             return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
         } break;
@@ -699,6 +736,10 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type cannot be readonly/writeonly."); \
             } else type->primitiveType.access = access; \
             if (SX) type->primitiveType.size = current->sizeParameter; \
+            if (laye_parser_check(p, '?')) { \
+                laye_parser_advance(p); \
+                type->primitiveType.isNilable = isNilable; \
+            } \
             *outTypeSyntax = type; \
             laye_parser_advance(p); \
             return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics); \
@@ -707,6 +748,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
     list(string) path = nullptr;
     string identifierName = { 0 };
     bool isPathHeadless = false;
+    bool isNilable = false;
     switch (current->kind)
     {
         case LAYE_TOKEN_COLON_COLON:
@@ -740,11 +782,18 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 templateArguments = laye_parse_template_arguments(p);
             }
 
+            if (laye_parser_check(p, '?'))
+            {
+                laye_parser_advance(p);
+                isNilable = true;
+            }
+
             laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_NAMED, startLocation);
             assert(type != nullptr);
             type->lookupType.path = path;
             type->lookupType.templateArguments = templateArguments;
             type->lookupType.isHeadless = isPathHeadless;
+            type->lookupType.isNilable = isNilable;
             *outTypeSyntax = type;
             return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics);
         }

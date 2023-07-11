@@ -82,7 +82,7 @@
     A(EXPRESSION_LOOKUP) \
     A(EXPRESSION_CONSTRUCTOR) \
     A(EXPRESSION_NEW) \
-    A(EXPRESSION_NULLPTR) \
+    A(EXPRESSION_NIL) \
     A(EXPRESSION_TRUE) \
     A(EXPRESSION_FALSE) \
     A(EXPRESSION_STRING) \
@@ -205,7 +205,7 @@ struct laye_ast_node
             laye_ast_type_access access;
             // for arbitrary-sized primitive types like i32
             int size;
-            bool nilable;
+            bool isNilable;
         } primitiveType;
 
         // for container types like pointers or arrays
@@ -215,7 +215,7 @@ struct laye_ast_node
             laye_ast_node* elementType;
             // array dimension expressions
             list(laye_ast_node*) ranks;
-            bool nilable;
+            bool isNilable;
         } containerType;
 
         struct
@@ -223,14 +223,14 @@ struct laye_ast_node
             list(string) path;
             list(laye_ast_template_argument) templateArguments;
             bool isHeadless;
-            bool nilable;
+            bool isNilable;
         } lookupType;
 
         struct
         {
             laye_ast_node* returnType;
             list(laye_ast_node*) parameterTypes;
-            bool nilable;
+            bool isNilable;
         } functionType;
 
         struct

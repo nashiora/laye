@@ -37,7 +37,7 @@
     K(CONTEXT, "context") \
     K(TRUE, "true") \
     K(FALSE, "false") \
-    K(NULLPTR, "nullptr") \
+    K(NIL, "nil") \
     K(IF, "if") \
     K(THEN, "then") \
     K(ELSE, "else") \
