@@ -11,6 +11,26 @@ struct list<T>
     T[*] values;
 }
 
+struct location
+{
+    uint offset;
+    uint length;
+}
+
+struct token
+{
+    location location;
+
+    variant void;
+    variant identifier;
+    variant string_literal { string value; }
+}
+
+enum color
+{
+    red, blue, green = 2
+}
+
 void main(readonly string[] argv)
 {
     i32(string) parser = numbers::parse_i32;

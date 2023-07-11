@@ -1311,6 +1311,26 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
     return bindingDeclaration;
 }
 
+static laye_ast_node* laye_parse_field_declaration(laye_parser* p)
+{
+    assert(p != nullptr);
+
+    laye_ast_node* fieldType = nullptr;
+    bool typeSuccess = laye_parser_try_parse_type(p, &fieldType, true);
+    assert(typeSuccess);
+
+    laye_token* fieldNameToken = laye_parser_expect_identifier(p, nullptr);
+    string fieldName = layec_intern_location_text(p->context, fieldNameToken->location);
+
+    laye_parser_expect(p, ';', nullptr);
+
+    laye_ast_node* fieldBinding = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, fieldNameToken->location);
+    fieldBinding->bindingDeclaration.declaredType = fieldType;
+    fieldBinding->bindingDeclaration.name = fieldName;
+
+    return fieldBinding;
+}
+
 static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
 {
     assert(p != nullptr);
@@ -1382,21 +1402,58 @@ after_modifier_parse:;
             laye_parser_expect(p, '{', nullptr);
 
             list(laye_ast_node*) fieldBindings = nullptr;
+            list(laye_ast_struct_variant) variants = nullptr;
             while (!laye_parser_is_eof(p) && !laye_parser_check(p, '}'))
             {
-                laye_ast_node* fieldType = nullptr;
-                bool typeSuccess = laye_parser_try_parse_type(p, &fieldType, true);
-                assert(typeSuccess);
+                if (laye_parser_check(p, LAYE_TOKEN_VARIANT))
+                {
+                    laye_parser_advance(p);
 
-                laye_token* fieldNameToken = laye_parser_expect_identifier(p, nullptr);
-                string fieldName = layec_intern_location_text(p->context, fieldNameToken->location);
+                    if (laye_parser_check(p, LAYE_TOKEN_VOID))
+                    {
+                        laye_parser_advance(p);
+                        laye_parser_expect(p, ';', nullptr);
 
-                laye_parser_expect(p, ';', nullptr);
+                        laye_ast_struct_variant variant = {
+                            .isVoid = true,
+                        };
+                        arrput(variants, variant);
+                    }
+                    else
+                    {
+                        laye_token* variantNameToken = laye_parser_expect_identifier(p, nullptr);
+                        string variantName = layec_intern_location_text(p->context, variantNameToken->location);
+                        
+                        list(laye_ast_node*) variantFieldBindings = nullptr;
+                        if (laye_parser_check(p, ';'))
+                        {
+                            laye_parser_advance(p);
+                        }
+                        else
+                        {
+                            laye_parser_expect(p, '{', nullptr);
 
-                laye_ast_node* fieldBinding = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, fieldNameToken->location);
-                fieldBinding->bindingDeclaration.declaredType = fieldType;
-                fieldBinding->bindingDeclaration.name = fieldName;
-                arrput(fieldBindings, fieldBinding);
+                            while (!laye_parser_is_eof(p) && !laye_parser_check(p, '}'))
+                            {
+                                laye_ast_node* fieldBinding = laye_parse_field_declaration(p);
+                                arrput(variantFieldBindings, fieldBinding);
+                            }
+
+                            laye_parser_expect(p, '}', nullptr);
+                        }
+
+                        laye_ast_struct_variant variant = {
+                            .name = variantName,
+                            .fieldBindings = variantFieldBindings
+                        };
+                        arrput(variants, variant);
+                    }
+                }
+                else
+                {
+                    laye_ast_node* fieldBinding = laye_parse_field_declaration(p);
+                    arrput(fieldBindings, fieldBinding);
+                }
             }
             
             laye_parser_expect(p, '}', nullptr);
@@ -1407,6 +1464,60 @@ after_modifier_parse:;
             decl->structDeclaration.name = name;
             decl->structDeclaration.templateParameters = templateParameters;
             decl->structDeclaration.fieldBindings = fieldBindings;
+            decl->structDeclaration.variants = variants;
+
+            return decl;
+        }
+
+        case LAYE_TOKEN_ENUM:
+        {
+            layec_location startLocation = current->location;
+            laye_parser_advance(p);
+
+            laye_token* nameToken = laye_parser_expect_identifier(p, nullptr);
+            string name = layec_intern_location_text(p->context, nameToken->location);
+
+            list(laye_ast_template_parameter) templateParameters = nullptr;
+            if (laye_parser_check(p, '<'))
+            {
+                templateParameters = laye_parse_template_parameters(p);
+            }
+
+            laye_parser_expect(p, '{', nullptr);
+
+            list(laye_ast_enum_variant) variants = nullptr;
+            while (!laye_parser_is_eof(p) && !laye_parser_check(p, '}'))
+            {
+                laye_token* variantNameToken = laye_parser_expect_identifier(p, nullptr);
+                string variantName = layec_intern_location_text(p->context, variantNameToken->location);
+
+                laye_ast_node* variantValue = nullptr;
+                if (laye_parser_check(p, '='))
+                {
+                    laye_parser_advance(p);
+                    variantValue = laye_parse_expression(p);
+                }
+
+                laye_ast_enum_variant variant = {
+                    .name = variantName,
+                    .value = variantValue,
+                };
+                arrput(variants, variant);
+
+                if (!laye_parser_check(p, ','))
+                    break;
+                
+                laye_parser_advance(p);
+            }
+            
+            laye_parser_expect(p, '}', nullptr);
+
+            layec_location location = layec_location_combine(startLocation, laye_parser_most_recent_location(p));
+            laye_ast_node* decl = laye_ast_node_alloc(p, LAYE_AST_NODE_ENUM_DECLARATION, location);
+            decl->enumDeclaration.modifiers = modifiers;
+            decl->enumDeclaration.name = name;
+            decl->enumDeclaration.templateParameters = templateParameters;
+            decl->enumDeclaration.variants = variants;
 
             return decl;
         }

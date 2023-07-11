@@ -289,6 +289,12 @@ static void laye_ast_fprint_template_argument(ast_fprint_state state, laye_ast_t
 {
     laye_ast_fprint_name(state, STRING_VIEW_LITERAL("TEMPLATE_ARGUMENT"), isLast);
 
+    RESETCOLOR;
+    fprintf(state.stream, "\n");
+
+    usize lastStringBuilderCount = state.indents->count;
+    string_builder_append_cstring(state.indents, isLast ? "  " : "│ ");
+
     switch (arg.kind)
     {
         default: break;
@@ -313,8 +319,70 @@ static void laye_ast_fprint_template_argument(ast_fprint_state state, laye_ast_t
         } break;
     }
 
+    string_builder_set_count(state.indents, lastStringBuilderCount);
+}
+
+static void laye_ast_fprint_struct_variant(ast_fprint_state state, laye_ast_struct_variant variant, bool isLast)
+{
+    laye_ast_fprint_name(state, STRING_VIEW_LITERAL("STRUCT_VARIANT"), isLast);
+
+    if (variant.isVoid)
+    {
+        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+        fprintf(state.stream, " <");
+        PUTCOLOR(ANSI_COLOR_BLUE);
+        fprintf(state.stream, "Void");
+        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+        fprintf(state.stream, ">");
+    }
+    else
+    {
+        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+        fprintf(state.stream, " <");
+        PUTCOLOR(ANSI_COLOR_BLUE);
+        fprintf(state.stream, "Name: ");
+        RESETCOLOR;
+        fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(variant.name));
+        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+        fprintf(state.stream, ">");
+    }
+
     RESETCOLOR;
     fprintf(state.stream, "\n");
+
+    usize lastStringBuilderCount = state.indents->count;
+    string_builder_append_cstring(state.indents, isLast ? "  " : "│ ");
+    
+    usize variantsLen = arrlenu(variant.fieldBindings);
+    for (usize i = 0; i < variantsLen; i++)
+        laye_ast_fprint_node(state, variant.fieldBindings[i], i == variantsLen - 1);
+    
+    string_builder_set_count(state.indents, lastStringBuilderCount);
+}
+
+static void laye_ast_fprint_enum_variant(ast_fprint_state state, laye_ast_enum_variant variant, bool isLast)
+{
+    laye_ast_fprint_name(state, STRING_VIEW_LITERAL("ENUM_VARIANT"), isLast);
+
+    PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+    fprintf(state.stream, " <");
+    PUTCOLOR(ANSI_COLOR_BLUE);
+    fprintf(state.stream, "Name: ");
+    RESETCOLOR;
+    fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(variant.name));
+    PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+    fprintf(state.stream, ">");
+
+    RESETCOLOR;
+    fprintf(state.stream, "\n");
+    
+    if (variant.value != nullptr)
+    {
+        usize lastStringBuilderCount = state.indents->count;
+        string_builder_append_cstring(state.indents, isLast ? "  " : "│ ");
+        laye_ast_fprint_node(state, variant.value, true);
+        string_builder_set_count(state.indents, lastStringBuilderCount);
+    }
 }
 
 static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bool isLast)
@@ -355,6 +423,18 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, "Name: ");
             RESETCOLOR;
             fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->structDeclaration.name));
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+
+        case LAYE_AST_NODE_ENUM_DECLARATION:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Name: ");
+            RESETCOLOR;
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->enumDeclaration.name));
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
@@ -489,12 +569,23 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         {
             usize templateParamsLen = arrlenu(node->structDeclaration.templateParameters);
             usize fieldsLen = arrlenu(node->structDeclaration.fieldBindings);
+            usize variantsLen = arrlenu(node->structDeclaration.variants);
 
             for (usize i = 0; i < templateParamsLen; i++)
-                laye_ast_fprint_template_parameter(state, node->structDeclaration.templateParameters[i], i == templateParamsLen - 1 && fieldsLen == 0);
+                laye_ast_fprint_template_parameter(state, node->structDeclaration.templateParameters[i], i == templateParamsLen - 1 && fieldsLen == 0 && variantsLen == 0);
 
             for (usize i = 0; i < fieldsLen; i++)
-                laye_ast_fprint_node(state, node->structDeclaration.fieldBindings[i], i == fieldsLen - 1);
+                laye_ast_fprint_node(state, node->structDeclaration.fieldBindings[i], i == fieldsLen - 1 && variantsLen == 0);
+
+            for (usize i = 0; i < variantsLen; i++)
+                laye_ast_fprint_struct_variant(state, node->structDeclaration.variants[i], i == variantsLen - 1);
+        } break;
+
+        case LAYE_AST_NODE_ENUM_DECLARATION:
+        {
+            usize variantsLen = arrlenu(node->enumDeclaration.variants);
+            for (usize i = 0; i < variantsLen; i++)
+                laye_ast_fprint_enum_variant(state, node->enumDeclaration.variants[i], i == variantsLen - 1);
         } break;
 
         case LAYE_AST_NODE_BINDING_DECLARATION:

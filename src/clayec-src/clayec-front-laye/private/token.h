@@ -54,6 +54,7 @@
     K(YIELD, "yield") \
     K(GOTO, "goto") \
     K(STRUCT, "struct") \
+    K(VARIANT, "variant") \
     K(ENUM, "enum") \
     K(USE, "use") \
     K(IMPORT, "import") \

@@ -128,10 +128,17 @@ typedef struct laye_ast_modifier
     };
 } laye_ast_modifier;
 
-typedef struct laye_ast_enum_variant
+typedef struct laye_ast_struct_variant
 {
     string name;
     list(laye_ast_node*) fieldBindings;
+    bool isVoid;
+} laye_ast_struct_variant;
+
+typedef struct laye_ast_enum_variant
+{
+    string name;
+    laye_ast_node* value;
 } laye_ast_enum_variant;
 
 typedef struct laye_ast_import
@@ -233,6 +240,7 @@ struct laye_ast_node
             string name;
             list(laye_ast_template_parameter) templateParameters;
             list(laye_ast_node*) fieldBindings;
+            list(laye_ast_struct_variant) variants;
         } structDeclaration;
 
         struct
