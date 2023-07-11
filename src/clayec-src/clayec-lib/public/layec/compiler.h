@@ -17,6 +17,8 @@ typedef struct layec_context
     bool verbose;
     bool hasIssuedHighSeverityDiagnostic;
     list(layec_source_file_info) files;
+    arena_allocator* stringArena;
+    list(string) internedStrings;
     arena_allocator* constantArena;
 } layec_context;
 
@@ -30,6 +32,7 @@ string layec_context_get_file_source(layec_context* context, layec_fileid fileId
 
 string_view layec_view_from_location(layec_context* context, layec_location loc);
 string layec_intern_string_view(layec_context* context, string_view view);
+string layec_intern_location_text(layec_context* context, layec_location location);
 
 EXT_FORMAT(4, 5)
 void layec_debugf(layec_context* context, const char* fmt, ...);

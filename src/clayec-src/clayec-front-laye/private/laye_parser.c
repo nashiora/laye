@@ -20,6 +20,39 @@ typedef struct laye_parser
     usize currentTokenIndex;
 } laye_parser;
 
+typedef struct laye_operator_info
+{
+    laye_token_kind tokenKind;
+    int precendence;
+} laye_operator_info;
+
+static laye_operator_info layeOperatorInfos[] = {
+    { LAYE_TOKEN_OR,  5 },
+    { LAYE_TOKEN_XOR,  5 },
+    { LAYE_TOKEN_AND,  6 },
+
+    { LAYE_TOKEN_EQUAL_EQUAL,  10 },
+    { LAYE_TOKEN_BANG_EQUAL,  10 },
+
+    { '<',  20 },
+    { '>',  20 },
+    { LAYE_TOKEN_LESS_EQUAL,  20 },
+    { LAYE_TOKEN_GREATER_EQUAL,  20 },
+
+    { '&',  30 },
+    { '|',  30 },
+    { '~',  30 },
+    { LAYE_TOKEN_LESS_LESS,  30 },
+    { LAYE_TOKEN_GREATER_GREATER_EQUAL,  30 },
+
+    { '+', 40 },
+    { '-', 40 },
+
+    { '*', 50 },
+    { '/', 50 },
+    { '%', 50 },
+};
+
 static void* ast_node_allocator(allocator_action action, void* memory, usize count)
 {
     switch (action)
@@ -174,12 +207,13 @@ static bool laye_parser_check_conditional_keyword(laye_parser* p, const char* ke
     laye_token* current = laye_parser_current(p);
     assert(current != nullptr);
 
-    if (current->kind != LAYE_TOKEN_IDENTIFIER || strlen(keyword) != current->atom.count)
+    if (current->kind != LAYE_TOKEN_IDENTIFIER || strlen(keyword) != current->location.length)
     {
         return false;
     }
 
-    return 0 == strncmp(keyword, cast(const char*) current->atom.memory, current->atom.count);
+    string sourceText = layec_context_get_file_source(p->context, current->location.fileId);
+    return 0 == strncmp(keyword, cast(const char*) (sourceText.memory + current->location.offset), current->location.length);
 }
 
 static bool laye_parser_peek_check(laye_parser* p, laye_token_kind kind)
@@ -213,7 +247,6 @@ static void laye_parser_expect_out(laye_parser* p, laye_token_kind kind, const c
             laye_token* newToken = arena_push(p->tokenArena, sizeof(laye_token));
             newToken->kind = kind;
             newToken->location = endLocation;
-            newToken->atom = STRING_VIEW_LITERAL("<invalid>");
 
             *outToken = newToken;
         }
@@ -238,7 +271,7 @@ static void laye_parser_expect_out(laye_parser* p, laye_token_kind kind, const c
             laye_token* newToken = arena_push(p->tokenArena, sizeof(laye_token));
             newToken->kind = kind;
             newToken->location = current->location;
-            newToken->atom = STRING_VIEW_LITERAL("<invalid>");
+            newToken->location.length = 0;
 
             *outToken = newToken;
         }
@@ -286,7 +319,7 @@ static laye_ast_import laye_parse_import_declaration(laye_parser* p, bool export
     {
         current = laye_parser_current(p);
         assert(current != nullptr);
-        result.name = layec_intern_string_view(p->context, current->atom);
+        result.name = layec_intern_location_text(p->context, current->location);
         laye_parser_advance(p);
     }
     else
@@ -303,8 +336,7 @@ static laye_ast_import laye_parse_import_declaration(laye_parser* p, bool export
         laye_parser_advance(p);
         laye_token* aliasToken = laye_parser_expect_identifier(p, nullptr);
         assert(aliasToken != nullptr);
-        assert(aliasToken->atom.count > 0);
-        result.alias = layec_intern_string_view(p->context, aliasToken->atom);
+        result.alias = layec_intern_location_text(p->context, aliasToken->location);
     }
 
     laye_parser_expect(p, ';', nullptr);
@@ -662,7 +694,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             laye_ast_node* type = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ ## TY, current->location); \
             if (access != LAYE_AST_ACCESS_NONE && LAYE_TOKEN_ ## TK != LAYE_TOKEN_STRING && LAYE_TOKEN_ ## TK != LAYE_TOKEN_C_STRING) \
             { \
-                layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type '"STRING_VIEW_FORMAT"' cannot be readonly/writeonly.", STRING_VIEW_EXPAND(current->atom)); \
+                layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type cannot be readonly/writeonly."); \
             } else type->primitiveType.access = access; \
             if (SX) type->primitiveType.size = current->sizeParameter; \
             *outTypeSyntax = type; \
@@ -680,7 +712,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             goto start_path_resolution_parse;
         case LAYE_TOKEN_IDENTIFIER:
         {
-            identifierName = layec_intern_string_view(p->context, current->atom);
+            identifierName = layec_intern_location_text(p->context, current->location);
             laye_parser_advance(p);
             
             list(laye_ast_template_argument) templateArguments = nullptr;
@@ -702,7 +734,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                     laye_token* nextIdent = laye_parser_expect_identifier(p, nullptr);
                     assert(nextIdent != nullptr);
                     lastIdentifierLocation = nextIdent->location;
-                    string nextName = layec_intern_string_view(p->context, nextIdent->atom);
+                    string nextName = layec_intern_location_text(p->context, nextIdent->location);
                     arrput(path, nextName);
                 }
 
@@ -867,7 +899,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             goto start_path_resolution_parse;
         case LAYE_TOKEN_IDENTIFIER:
         {
-            identifierName = layec_intern_string_view(p->context, current->atom);
+            identifierName = layec_intern_location_text(p->context, current->location);
             laye_parser_advance(p);
             
             list(laye_ast_template_argument) templateArguments = nullptr;
@@ -889,7 +921,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
                     laye_token* nextIdent = laye_parser_expect_identifier(p, nullptr);
                     assert(nextIdent != nullptr);
                     lastIdentifierLocation = nextIdent->location;
-                    string nextName = layec_intern_string_view(p->context, nextIdent->atom);
+                    string nextName = layec_intern_location_text(p->context, nextIdent->location);
                     arrput(path, nextName);
                 }
 
@@ -944,19 +976,74 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
     }
 }
 
-static laye_ast_node* laye_parse_secondary(laye_parser* p, laye_ast_node* left, int precedence)
+static bool is_binary_operator_with_precedence(laye_parser* p, int precedence, int* outNewPrecedence)
 {
-    return left;
+    laye_token* c = laye_parser_current(p);
+    if (c == NULL)
+        return false;
+
+    usize numOps = sizeof(layeOperatorInfos) / sizeof(laye_operator_info);
+    for (usize i = 0; i < numOps; i++)
+    {
+        if (c->kind == layeOperatorInfos[i].tokenKind && layeOperatorInfos[i].precendence >= precedence)
+        {
+            if (outNewPrecedence)
+                *outNewPrecedence = layeOperatorInfos[i].precendence;
+            return true;
+        }
+    }
+
+    return false;
 }
 
-static laye_ast_node* laye_parse_expression(laye_parser* p)
+static laye_ast_node* laye_parse_binary(laye_parser* p, laye_ast_node* lhs, int precedence)
+{
+    assert(p != nullptr);
+    assert(lhs != nullptr);
+    assert(precedence >= 0);
+
+    int nextPrecedence = 0;
+    while (is_binary_operator_with_precedence(p, precedence, &nextPrecedence))
+    {
+        laye_token* operatorToken = laye_parser_current(p);
+        assert(operatorToken != nullptr);
+        laye_parser_advance(p);
+
+        laye_ast_node* rhs = laye_parse_primary(p);
+        assert(rhs != nullptr);
+
+        int rhsPrecedence = nextPrecedence;
+        while (is_binary_operator_with_precedence(p, rhsPrecedence, &nextPrecedence))
+            rhs = laye_parse_binary(p, rhs, rhsPrecedence);
+        
+        laye_ast_node* binaryExpression = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_BINARY, layec_location_combine(lhs->location, rhs->location));
+        binaryExpression->binary.lhs = lhs;
+        binaryExpression->binary.rhs = rhs;
+        binaryExpression->binary.operatorKind = operatorToken->kind;
+        binaryExpression->binary.operatorString = layec_intern_location_text(p->context, operatorToken->location);
+
+        lhs = binaryExpression;
+    }
+
+    assert(lhs != nullptr);
+    return lhs;
+}
+
+static laye_ast_node* laye_parse_secondary(laye_parser* p)
 {
     assert(p != nullptr);
 
     laye_ast_node* primary = laye_parse_primary(p);
     assert(primary != nullptr);
 
-    laye_ast_node* secondary = laye_parse_secondary(p, primary, 0);
+    return laye_parse_binary(p, primary, 0);
+}
+
+static laye_ast_node* laye_parse_expression(laye_parser* p)
+{
+    assert(p != nullptr);
+
+    laye_ast_node* secondary = laye_parse_secondary(p);
     assert(secondary != nullptr);
 
     return secondary;
@@ -1062,7 +1149,7 @@ static list(laye_ast_template_parameter) laye_parse_template_parameters(laye_par
         {
             laye_token* typeParamToken = laye_parser_current(p);
             assert(typeParamToken != nullptr);
-            string typeParamName = layec_intern_string_view(p->context, typeParamToken->atom);
+            string typeParamName = layec_intern_location_text(p->context, typeParamToken->location);
             laye_parser_advance(p);
 
             laye_ast_template_parameter param = {
@@ -1080,7 +1167,7 @@ static list(laye_ast_template_parameter) laye_parse_template_parameters(laye_par
 
             laye_token* valueNameToken = laye_parser_expect_identifier(p, nullptr);
             assert(valueNameToken != nullptr);
-            string valueName = layec_intern_string_view(p->context, valueNameToken->atom);
+            string valueName = layec_intern_location_text(p->context, valueNameToken->location);
 
             laye_ast_template_parameter param = {
                 .kind = LAYE_TEMPLATE_PARAM_VALUE,
@@ -1164,7 +1251,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
             
             paramBinding = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, layec_location_combine(paramTypeSyntax->location, paramNameToken->location));
             paramBinding->bindingDeclaration.declaredType = paramTypeSyntax;
-            paramBinding->bindingDeclaration.name = layec_intern_string_view(p->context, paramNameToken->atom);
+            paramBinding->bindingDeclaration.name = layec_intern_location_text(p->context, paramNameToken->location);
 
             arrput(parameterBindingNodes, paramBinding);
             
@@ -1192,7 +1279,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         laye_ast_node* functionDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_FUNCTION_DECLARATION, name->location);
         functionDeclaration->functionDeclaration.modifiers = modifiers;
         functionDeclaration->functionDeclaration.returnType = declType;
-        functionDeclaration->functionDeclaration.name = layec_intern_string_view(p->context, name->atom);
+        functionDeclaration->functionDeclaration.name = layec_intern_location_text(p->context, name->location);
         functionDeclaration->functionDeclaration.templateParameters = templateParameters;
         functionDeclaration->functionDeclaration.parameterBindings = parameterBindingNodes;
         functionDeclaration->functionDeclaration.body = functionBody;
@@ -1208,7 +1295,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
     laye_ast_node* bindingDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, name->location);
     bindingDeclaration->bindingDeclaration.modifiers = modifiers;
     bindingDeclaration->bindingDeclaration.declaredType = declType;
-    bindingDeclaration->bindingDeclaration.name = layec_intern_string_view(p->context, name->atom);
+    bindingDeclaration->bindingDeclaration.name = layec_intern_location_text(p->context, name->location);
 
     if (laye_parser_check(p, '='))
     {
@@ -1284,7 +1371,7 @@ after_modifier_parse:;
             laye_parser_advance(p);
 
             laye_token* nameToken = laye_parser_expect_identifier(p, nullptr);
-            string name = layec_intern_string_view(p->context, nameToken->atom);
+            string name = layec_intern_location_text(p->context, nameToken->location);
 
             list(laye_ast_template_parameter) templateParameters = nullptr;
             if (laye_parser_check(p, '<'))
@@ -1302,7 +1389,7 @@ after_modifier_parse:;
                 assert(typeSuccess);
 
                 laye_token* fieldNameToken = laye_parser_expect_identifier(p, nullptr);
-                string fieldName = layec_intern_string_view(p->context, fieldNameToken->atom);
+                string fieldName = layec_intern_location_text(p->context, fieldNameToken->location);
 
                 laye_parser_expect(p, ';', nullptr);
 

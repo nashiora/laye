@@ -129,7 +129,6 @@ typedef struct laye_token
 {
     laye_token_kind kind;
     layec_location location;
-    string_view atom;
     union
     {
         int sizeParameter;

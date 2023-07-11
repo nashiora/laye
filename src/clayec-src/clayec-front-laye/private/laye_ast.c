@@ -448,6 +448,18 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
+
+        case LAYE_AST_NODE_EXPRESSION_BINARY:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Operator: ");
+            RESETCOLOR;
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->binary.operatorString));
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
     }
 
     RESETCOLOR;
@@ -514,6 +526,12 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             laye_ast_fprint_node(state, node->invoke.target, argLen == 0);
             for (usize i = 0; i < argLen; i++)
                 laye_ast_fprint_node(state, node->invoke.arguments[i], i == argLen - 1);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_BINARY:
+        {
+            laye_ast_fprint_node(state, node->binary.lhs, false);
+            laye_ast_fprint_node(state, node->binary.rhs, true);
         } break;
     }
 

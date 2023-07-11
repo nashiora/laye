@@ -139,7 +139,8 @@ static laye_token* lexer_get_token(laye_lexer* l)
     usize startPosition = l->currentPosition;
     
     rune c = lexer_current(l);
-    //layec_debugf(l->context, "processing char %d\n", cast(int) c);
+    rune firstChar = c;
+
     switch (c)
     {
         case 'A': case 'B': case 'C': case 'D': case 'E':
@@ -192,9 +193,8 @@ static laye_token* lexer_get_token(laye_lexer* l)
             
             token->kind = LAYE_TOKEN_IDENTIFIER;
             token->location = lexer_location(l, startPosition);
-            token->atom = layec_view_from_location(l->context, token->location);
 
-            if (areAllSubsequentCharactersDigits && token->atom.count > 1)
+            if (areAllSubsequentCharactersDigits && token->location.length > 1)
             {
                 if (isSizedTypeParamterOutOfRange)
                 {
@@ -202,7 +202,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
                 }
 
                 token->sizeParameter = possibleSizedTypeParamterValue;
-                switch (token->atom.memory[0])
+                switch (firstChar)
                 {
                     case 'i': token->kind = LAYE_TOKEN_IX; break;
                     case 'u': token->kind = LAYE_TOKEN_UX; break;
@@ -216,7 +216,10 @@ static laye_token* lexer_get_token(laye_lexer* l)
                 for (size_t i = 0; i < keywords[i].kind != 0; i++)
                 {
                     layec_keyword_info kw = keywords[i];
-                    if (string_view_equals_constant(token->atom, kw.image))
+                    if (strlen(kw.image) != token->location.length)
+                        continue;
+
+                    if (0 == strncmp(cast(const char*) (l->sourceText.memory + startPosition), kw.image, token->location.length))
                     {
                         token->kind = kw.kind;
                         break;
@@ -501,11 +504,10 @@ static laye_token* lexer_get_token(laye_lexer* l)
 
             token->integerValue = integerValue;
             token->location = lexer_location(l, startPosition);
-            token->atom = layec_view_from_location(l->context, token->location);
 
             if (isIntTooLarge)
             {
-                layec_issue_diagnostic(l->context, SEV_ERROR, token->location, "Number '" STRING_VIEW_FORMAT "' does not fit within the maximum constant size of 64 bits.", STRING_VIEW_EXPAND(token->atom));
+                layec_issue_diagnostic(l->context, SEV_ERROR, token->location, "Number '%.*s' does not fit within the maximum constant size of 64 bits.", cast(int) token->location.length, cast(const char*) (l->sourceText.memory + startPosition));
             }
         } break;
 
@@ -579,10 +581,6 @@ static laye_token* lexer_get_token(laye_lexer* l)
     assert(token->location.fileId != 0);
     assert(token->location.length != 0);
 
-    if (token->atom.memory == nullptr)
-        token->atom = layec_view_from_location(l->context, token->location);
-
-    assert(token->atom.count > 0, "%zu:%zu", token->location.offset, token->location.length);
     return token;
 }
 

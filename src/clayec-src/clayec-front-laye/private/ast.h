@@ -276,6 +276,14 @@ struct laye_ast_node
             laye_ast_node* target;
             list(laye_ast_node*) arguments;
         } invoke;
+
+        struct
+        {
+            laye_ast_node* lhs;
+            laye_ast_node* rhs;
+            laye_token_kind operatorKind;
+            string operatorString;
+        } binary;
     };
 };
 

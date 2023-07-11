@@ -1,6 +1,6 @@
 export i32 get_nice_number()
 {
-    return 69;
+    return 34 + 35;
 }
 
 export i32 parse_i32(string input)

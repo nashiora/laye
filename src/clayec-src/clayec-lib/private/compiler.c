@@ -11,6 +11,9 @@
 
 void layec_context_init(layec_context* context)
 {
+    context->stringArena = arena_create(default_allocator, 10 * 1024);
+    assert(context->stringArena != nullptr);
+
     context->constantArena = arena_create(default_allocator, 10 * 1024);
     assert(context->constantArena != nullptr);
 }
@@ -160,19 +163,74 @@ string_view layec_view_from_location(layec_context* context, layec_location loc)
     return (string_view){ source.memory + loc.offset, loc.length };
 }
 
-// TODO(local): actually figure out a mechanism for interning strings
 string layec_intern_string_view(layec_context* context, string_view view)
 {
-    char* memory = allocate(default_allocator, view.count + 1);
-    memcpy(memory, view.memory, view.count);
-    memory[view.count] = 0;
+    assert(context != nullptr);
 
-    string newIntern = (string){
-        .allocator = default_allocator,
-        .memory = cast(const uchar*) memory,
+    if (view.count == 0)
+        return (string){ .memory = "<empty>", .allocator = nullptr, .count = 7 };
+
+    usize internCount = arrlenu(context->internedStrings);
+    for (usize i = 0; i < internCount; i++)
+    {
+        string s = context->internedStrings[i];
+        if (s.count != view.count)
+            continue;
+
+        if (0 == strncmp(cast(const char*) view.memory, cast(const char*) s.memory, view.count))
+        {
+            return s;
+        }
+    }
+
+    uchar* newMemory = arena_push(context->stringArena, view.count + 1);
+    memcpy(newMemory, view.memory, view.count);
+    newMemory[view.count] = 0;
+
+    string newIntern = {
+        .allocator = nullptr,
         .count = view.count,
+        .memory = newMemory,
     };
 
+    arrpush(context->internedStrings, newIntern);
+    return newIntern;
+}
+
+string layec_intern_location_text(layec_context* context, layec_location location)
+{
+    assert(context != nullptr);
+
+    if (location.length == 0)
+        return (string){ .memory = "<empty>", .allocator = nullptr, .count = 7 };
+
+    string sourceText = layec_context_get_file_source(context, location.fileId);
+    const char* locationText = cast(const char*)(sourceText.memory + location.offset);
+
+    usize internCount = arrlenu(context->internedStrings);
+    for (usize i = 0; i < internCount; i++)
+    {
+        string s = context->internedStrings[i];
+        if (s.count != location.length)
+            continue;
+
+        if (0 == strncmp(locationText, cast(const char*) s.memory, location.length))
+        {
+            return s;
+        }
+    }
+
+    uchar* newMemory = arena_push(context->stringArena, location.length + 1);
+    memcpy(newMemory, locationText, location.length);
+    newMemory[location.length] = 0;
+
+    string newIntern = {
+        .allocator = nullptr,
+        .count = location.length,
+        .memory = newMemory,
+    };
+
+    arrpush(context->internedStrings, newIntern);
     return newIntern;
 }
 
