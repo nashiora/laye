@@ -48,6 +48,8 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
                 type_to_string_builder(typeNode->functionType.parameterTypes[i], sb);
             }
             string_builder_append_rune(sb, cast(rune) ')');
+            if (typeNode->functionType.isNilable)
+                string_builder_append_rune(sb, cast(rune) '?');
         } break;
 
         case LAYE_AST_NODE_TYPE_POINTER:
@@ -61,6 +63,8 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             }
 
             string_builder_append_rune(sb, cast(rune) '*');
+            if (typeNode->containerType.isNilable)
+                string_builder_append_rune(sb, cast(rune) '?');
         } break;
 
         case LAYE_AST_NODE_TYPE_SLICE:
@@ -74,6 +78,8 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             }
             
             string_builder_append_cstring(sb, "[]");
+            if (typeNode->containerType.isNilable)
+                string_builder_append_rune(sb, cast(rune) '?');
         } break;
 
         case LAYE_AST_NODE_TYPE_BUFFER:
@@ -87,6 +93,8 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             }
             
             string_builder_append_cstring(sb, "[*]");
+            if (typeNode->containerType.isNilable)
+                string_builder_append_rune(sb, cast(rune) '?');
         } break;
 
         case LAYE_AST_NODE_TYPE_ARRAY:
@@ -102,6 +110,8 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             string_builder_append_cstring(sb, "[rank ");
             string_builder_append_uint(sb, arrlenu(typeNode->containerType.ranks));
             string_builder_append_cstring(sb, " array]");
+            if (typeNode->containerType.isNilable)
+                string_builder_append_rune(sb, cast(rune) '?');
         } break;
 
         case LAYE_AST_NODE_TYPE_NAMED:
@@ -116,12 +126,14 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             }
             if (arrlenu(typeNode->lookupType.templateArguments) > 0)
                 template_args_to_string_builder(typeNode->lookupType.templateArguments, sb);
+            if (typeNode->lookupType.isNilable)
+                string_builder_append_rune(sb, cast(rune) '?');
         } break;
 
-        case LAYE_AST_NODE_TYPE_INFER: string_builder_append_cstring(sb, "var"); break;
-        case LAYE_AST_NODE_TYPE_NORETURN: string_builder_append_cstring(sb, "noreturn"); break;
-        case LAYE_AST_NODE_TYPE_RAWPTR: string_builder_append_cstring(sb, "rawptr"); break;
-        case LAYE_AST_NODE_TYPE_VOID: string_builder_append_cstring(sb, "void"); break;
+        case LAYE_AST_NODE_TYPE_INFER: string_builder_append_cstring(sb, "var"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_NORETURN: string_builder_append_cstring(sb, "noreturn"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_RAWPTR: string_builder_append_cstring(sb, "rawptr"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_VOID: string_builder_append_cstring(sb, "void"); goto check_primitive_nilable;
         case LAYE_AST_NODE_TYPE_STRING:
             if (typeNode->primitiveType.access == LAYE_AST_ACCESS_READONLY)
                 string_builder_append_cstring(sb, "readonly ");
@@ -129,31 +141,31 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
                 string_builder_append_cstring(sb, "writeonly ");
             string_builder_append_cstring(sb, "string");
             break;
-        case LAYE_AST_NODE_TYPE_RUNE: string_builder_append_cstring(sb, "rune"); break;
-        case LAYE_AST_NODE_TYPE_BOOL: string_builder_append_cstring(sb, "bool"); break;
-        case LAYE_AST_NODE_TYPE_INT: string_builder_append_cstring(sb, "int"); break;
-        case LAYE_AST_NODE_TYPE_UINT: string_builder_append_cstring(sb, "uint"); break;
-        case LAYE_AST_NODE_TYPE_FLOAT: string_builder_append_cstring(sb, "float"); break;
+        case LAYE_AST_NODE_TYPE_RUNE: string_builder_append_cstring(sb, "rune"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_BOOL: string_builder_append_cstring(sb, "bool"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_INT: string_builder_append_cstring(sb, "int"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_UINT: string_builder_append_cstring(sb, "uint"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_FLOAT: string_builder_append_cstring(sb, "float"); goto check_primitive_nilable;
 
         case LAYE_AST_NODE_TYPE_BOOL_SIZED:
             string_builder_append_cstring(sb, "b");
             string_builder_append_uint(sb, typeNode->primitiveType.size);
-            break;
+            goto check_primitive_nilable;
 
         case LAYE_AST_NODE_TYPE_INT_SIZED:
             string_builder_append_cstring(sb, "i");
             string_builder_append_uint(sb, typeNode->primitiveType.size);
-            break;
+            goto check_primitive_nilable;
 
         case LAYE_AST_NODE_TYPE_UINT_SIZED:
             string_builder_append_cstring(sb, "u");
             string_builder_append_uint(sb, typeNode->primitiveType.size);
-            break;
+            goto check_primitive_nilable;
 
         case LAYE_AST_NODE_TYPE_FLOAT_SIZED:
             string_builder_append_cstring(sb, "f");
             string_builder_append_uint(sb, typeNode->primitiveType.size);
-            break;
+            goto check_primitive_nilable;
 
         case LAYE_AST_NODE_TYPE_C_STRING:
             if (typeNode->primitiveType.access == LAYE_AST_ACCESS_READONLY)
@@ -161,25 +173,30 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             else if (typeNode->primitiveType.access == LAYE_AST_ACCESS_WRITEONLY)
                 string_builder_append_cstring(sb, "writeonly ");
             string_builder_append_cstring(sb, "c_string");
-            break;
-        case LAYE_AST_NODE_TYPE_C_CHAR: string_builder_append_cstring(sb, "c_char"); break;
-        case LAYE_AST_NODE_TYPE_C_SCHAR: string_builder_append_cstring(sb, "c_schar"); break;
-        case LAYE_AST_NODE_TYPE_C_UCHAR: string_builder_append_cstring(sb, "c_uchar"); break;
-        case LAYE_AST_NODE_TYPE_C_SHORT: string_builder_append_cstring(sb, "c_short"); break;
-        case LAYE_AST_NODE_TYPE_C_USHORT: string_builder_append_cstring(sb, "c_ushort"); break;
-        case LAYE_AST_NODE_TYPE_C_INT: string_builder_append_cstring(sb, "c_int"); break;
-        case LAYE_AST_NODE_TYPE_C_UINT: string_builder_append_cstring(sb, "c_uint"); break;
-        case LAYE_AST_NODE_TYPE_C_LONG: string_builder_append_cstring(sb, "c_long"); break;
-        case LAYE_AST_NODE_TYPE_C_ULONG: string_builder_append_cstring(sb, "c_ulong"); break;
-        case LAYE_AST_NODE_TYPE_C_LONGLONG: string_builder_append_cstring(sb, "c_longlong"); break;
-        case LAYE_AST_NODE_TYPE_C_ULONGLONG: string_builder_append_cstring(sb, "c_ulonglong"); break;
-        case LAYE_AST_NODE_TYPE_C_SIZE_T: string_builder_append_cstring(sb, "c_size_t"); break;
-        case LAYE_AST_NODE_TYPE_C_PTRDIFF_T: string_builder_append_cstring(sb, "c_ptrdiff_t"); break;
-        case LAYE_AST_NODE_TYPE_C_FLOAT: string_builder_append_cstring(sb, "c_float"); break;
-        case LAYE_AST_NODE_TYPE_C_DOUBLE: string_builder_append_cstring(sb, "c_double"); break;
-        case LAYE_AST_NODE_TYPE_C_LONGDOUBLE: string_builder_append_cstring(sb, "c_longdouble"); break;
-        case LAYE_AST_NODE_TYPE_C_BOOL: string_builder_append_cstring(sb, "c_bool"); break;
+            goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_CHAR: string_builder_append_cstring(sb, "c_char"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_SCHAR: string_builder_append_cstring(sb, "c_schar"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_UCHAR: string_builder_append_cstring(sb, "c_uchar"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_SHORT: string_builder_append_cstring(sb, "c_short"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_USHORT: string_builder_append_cstring(sb, "c_ushort"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_INT: string_builder_append_cstring(sb, "c_int"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_UINT: string_builder_append_cstring(sb, "c_uint"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_LONG: string_builder_append_cstring(sb, "c_long"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_ULONG: string_builder_append_cstring(sb, "c_ulong"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_LONGLONG: string_builder_append_cstring(sb, "c_longlong"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_ULONGLONG: string_builder_append_cstring(sb, "c_ulonglong"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_SIZE_T: string_builder_append_cstring(sb, "c_size_t"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_PTRDIFF_T: string_builder_append_cstring(sb, "c_ptrdiff_t"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_FLOAT: string_builder_append_cstring(sb, "c_float"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_DOUBLE: string_builder_append_cstring(sb, "c_double"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_LONGDOUBLE: string_builder_append_cstring(sb, "c_longdouble"); goto check_primitive_nilable;
+        case LAYE_AST_NODE_TYPE_C_BOOL: string_builder_append_cstring(sb, "c_bool"); goto check_primitive_nilable;
     }
+
+    return;
+check_primitive_nilable:;
+    if (typeNode->primitiveType.isNilable)
+        string_builder_append_rune(sb, cast(rune) '?');
 }
 
 string laye_ast_node_type_to_string(laye_ast_node* typeNode)

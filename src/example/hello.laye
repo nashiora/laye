@@ -38,7 +38,7 @@ void main(readonly string[] argv)
     token name = token::string_literal {
         value = "Local",
     };
-    token name2 = new(myalloc) ::string_literal {
+    token? name2 = new(myalloc) ::string_literal {
         value = "Lensor",
     };
 }
