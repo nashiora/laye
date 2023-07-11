@@ -246,6 +246,8 @@ struct laye_ast_node
             list(laye_ast_modifier) modifiers;
             laye_ast_node* returnType;
             string name;
+            bool isOperator;
+            laye_token_kind operator;
             list(laye_ast_template_parameter) templateParameters;
             list(laye_ast_node*) parameterBindings;
             laye_ast_node* body;

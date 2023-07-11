@@ -1325,11 +1325,13 @@ static list(laye_ast_template_parameter) laye_parse_template_parameters(laye_par
     return result;
 }
 
-static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_ast_modifier) modifiers, laye_ast_node* declType, laye_token* name)
+static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_ast_modifier) modifiers, laye_ast_node* declType, string name, layec_location nameLocation, laye_token_kind operator)
 {
     assert(p != nullptr);
     assert(declType != nullptr);
-    assert(name != nullptr);
+    assert(name.count > 0);
+
+    layec_location startLocation = arrlenu(modifiers) != 0 ? modifiers[0].location : declType->location;
 
     list(laye_ast_template_parameter) templateParameters = nullptr;
     if (laye_parser_check(p, '<'))
@@ -1392,20 +1394,25 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         laye_parser_expect(p, ')', nullptr);
 
         laye_ast_node* functionBody = nullptr;
+        laye_token* lastToken = nullptr;
         if (laye_parser_check(p, '{'))
             functionBody = laye_parse_grouped_statement(p);
         else if (laye_parser_check(p, LAYE_TOKEN_EQUAL_GREATER))
         {
             laye_parser_advance(p);
             functionBody = laye_parse_expression(p);
-            laye_parser_expect(p, ';', nullptr);
+            laye_parser_expect_out(p, ';', nullptr, &lastToken);
         }
-        else laye_parser_expect(p, ';', nullptr);
+        else laye_parser_expect_out(p, ';', nullptr, &lastToken);
 
-        laye_ast_node* functionDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_FUNCTION_DECLARATION, name->location);
+        layec_location lastLocation = lastToken != nullptr ? lastToken->location : functionBody->location;
+        layec_location location = layec_location_combine(startLocation, lastLocation);
+        laye_ast_node* functionDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_FUNCTION_DECLARATION, location);
         functionDeclaration->functionDeclaration.modifiers = modifiers;
         functionDeclaration->functionDeclaration.returnType = declType;
-        functionDeclaration->functionDeclaration.name = layec_intern_location_text(p->context, name->location);
+        functionDeclaration->functionDeclaration.name = name;
+        functionDeclaration->functionDeclaration.operator = operator;
+        functionDeclaration->functionDeclaration.isOperator = operator != LAYE_TOKEN_INVALID;
         functionDeclaration->functionDeclaration.templateParameters = templateParameters;
         functionDeclaration->functionDeclaration.parameterBindings = parameterBindingNodes;
         functionDeclaration->functionDeclaration.body = functionBody;
@@ -1415,13 +1422,18 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
 
     if (arrlenu(templateParameters) > 0)
     {
-        layec_issue_diagnostic(p->context, SEV_ERROR, name->location, "Binding declarations cannot have template parameters.");
+        layec_issue_diagnostic(p->context, SEV_ERROR, nameLocation, "Binding declarations cannot have template parameters.");
     }
 
-    laye_ast_node* bindingDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, name->location);
+    if (operator != LAYE_TOKEN_INVALID)
+    {
+        layec_issue_diagnostic(p->context, SEV_ERROR, nameLocation, "Binding name cannot be an operator.");
+    }
+
+    laye_ast_node* bindingDeclaration = laye_ast_node_alloc(p, LAYE_AST_NODE_BINDING_DECLARATION, layec_location_combine(startLocation, nameLocation));
     bindingDeclaration->bindingDeclaration.modifiers = modifiers;
     bindingDeclaration->bindingDeclaration.declaredType = declType;
-    bindingDeclaration->bindingDeclaration.name = layec_intern_location_text(p->context, name->location);
+    bindingDeclaration->bindingDeclaration.name = name;
 
     if (laye_parser_check(p, '='))
     {
@@ -1431,6 +1443,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         assert(assignValue != nullptr);
 
         bindingDeclaration->bindingDeclaration.initialValue = assignValue;
+        bindingDeclaration->location = layec_location_combine(startLocation, assignValue->location);
     }
 
     laye_parser_expect(p, LAYE_TOKEN_SEMI_COLON, nullptr);
@@ -1660,14 +1673,28 @@ after_modifier_parse:;
                 current = laye_parser_current(p);
                 assert(current != nullptr);
 
+                layec_location declNameLocation = { 0 };
+                laye_token_kind operator = LAYE_TOKEN_INVALID;
                 // TODO(local): how will we free syntax nodes?
-                if (!laye_parser_check(p, LAYE_TOKEN_IDENTIFIER))
-                    goto parse_decl_failed;
+                if (laye_parser_check(p, LAYE_TOKEN_OPERATOR))
+                {
+                    declNameLocation = laye_parser_current(p)->location;
+                    laye_parser_advance(p);
+                    // TODO(local): more complicated operators like [] and []=
+                    laye_token* operatorToken = laye_parser_current(p);
+                    declNameLocation = layec_location_combine(declNameLocation, operatorToken->location);
+                    operator = operatorToken->kind;
+                    laye_parser_advance(p);
+                }
+                else if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER))
+                {
+                    declNameLocation = current->location;
+                    laye_parser_advance(p);
+                }
+                else goto parse_decl_failed;
 
-                laye_token* declNameToken = current;
-                laye_parser_advance(p);
-
-                return laye_parse_declaration_continue(p, modifiers, typeSyntax, declNameToken);
+                string declName = layec_intern_location_text(p->context, declNameLocation);
+                return laye_parse_declaration_continue(p, modifiers, typeSyntax, declName, declNameLocation, operator);
             }
 
         parse_decl_failed:;

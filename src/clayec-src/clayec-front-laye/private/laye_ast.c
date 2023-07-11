@@ -267,6 +267,12 @@ static void laye_ast_fprint_template_parameter(ast_fprint_state state, laye_ast_
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, " <");
             PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Name: ");
+            RESETCOLOR;
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(param.name));
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, "> <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
             fprintf(state.stream, "Type: ");
             RESETCOLOR;
             string typeString = laye_ast_node_type_to_string(param.valueType);
@@ -274,7 +280,7 @@ static void laye_ast_fprint_template_parameter(ast_fprint_state state, laye_ast_
             string_deallocate(typeString);
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
-        } // fallthrough;
+        } break;
 
         case LAYE_TEMPLATE_PARAM_TYPE:
         {

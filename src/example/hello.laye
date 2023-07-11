@@ -5,6 +5,10 @@ struct vec<T, i32 N>
     T[N] data;
 }
 
+vec<T, N> operator + <T, i32 N>(vec<T, N> a, vec<T, N> b)
+{
+}
+
 struct list<T>
 {
     allocator allocator;
