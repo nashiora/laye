@@ -4,7 +4,13 @@ void main(readonly string[] argv)
 {
     while test do
     {
-        printf("Hello, hunter!");
+        printf("Hello, hunter!\n");
     }
-    else printf("Goodbye, hunter!");
+    else printf("Goodbye, hunter!\n");
+
+    do
+    {
+        printf("New loop!\n");
+    }
+    while test;
 }

@@ -1323,8 +1323,24 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
             layec_location location = layec_location_combine(startLocation, lastLocation);
             laye_ast_node* ifNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_WHILE, location);
             ifNode->_while.condition = condition;
-            ifNode->_while.pass = pass;
+            ifNode->_while.body = pass;
             ifNode->_while.fail = fail;
+            return ifNode;
+        }
+
+        case LAYE_TOKEN_DO:
+        {
+            laye_parser_advance(p); // `do`
+
+            laye_ast_node* body = laye_parse_statement(p);
+            laye_parser_expect(p, LAYE_TOKEN_WHILE, nullptr);
+            laye_ast_node* condition = laye_parse_expression(p);
+            laye_parser_expect_out(p, ';', nullptr, &current);
+
+            layec_location location = layec_location_combine(startLocation, current->location);
+            laye_ast_node* ifNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_DO_WHILE, location);
+            ifNode->_while.condition = condition;
+            ifNode->_while.body = body;
             return ifNode;
         }
 

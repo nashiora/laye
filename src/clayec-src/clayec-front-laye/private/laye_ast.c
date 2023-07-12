@@ -687,10 +687,16 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         case LAYE_AST_NODE_STATEMENT_WHILE:
         {
             laye_ast_fprint_node(state, node->_while.condition, false);
-            laye_ast_fprint_node(state, node->_while.pass, node->_while.fail == nullptr);
+            laye_ast_fprint_node(state, node->_while.body, node->_while.fail == nullptr);
 
             if (node->_if.fail != nullptr)
                 laye_ast_fprint_node(state, node->_while.fail, true);
+        } break;
+
+        case LAYE_AST_NODE_STATEMENT_DO_WHILE:
+        {
+            laye_ast_fprint_node(state, node->_while.body, false);
+            laye_ast_fprint_node(state, node->_while.condition, true);
         } break;
 
         case LAYE_AST_NODE_EXPRESSION_INVOKE:

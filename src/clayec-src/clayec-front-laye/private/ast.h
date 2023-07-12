@@ -70,6 +70,7 @@
     A(STATEMENT_IF) \
     A(STATEMENT_FOR) \
     A(STATEMENT_WHILE) \
+    A(STATEMENT_DO_WHILE) \
     A(STATEMENT_SWITCH) \
     A(STATEMENT_RETURN) \
     A(STATEMENT_CONTINUE) \
@@ -294,7 +295,7 @@ struct laye_ast_node
         struct
         {
             laye_ast_node* condition;
-            laye_ast_node* pass;
+            laye_ast_node* body;
             laye_ast_node* fail;
         } _while;
 
