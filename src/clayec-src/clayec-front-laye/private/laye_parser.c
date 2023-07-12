@@ -1246,6 +1246,23 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
             return returnNode;
         }
 
+        // TODO(local): break/continue targets
+        case LAYE_TOKEN_BREAK:
+        {
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_BREAK, current->location);
+            laye_parser_advance(p);
+            laye_parser_expect(p, ';', nullptr);
+            return resultNode;
+        }
+
+        case LAYE_TOKEN_CONTINUE:
+        {
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_CONTINUE, current->location);
+            laye_parser_advance(p);
+            laye_parser_expect(p, ';', nullptr);
+            return resultNode;
+        }
+
         case LAYE_TOKEN_IF:
         {
             layec_location lastLocation = startLocation;
