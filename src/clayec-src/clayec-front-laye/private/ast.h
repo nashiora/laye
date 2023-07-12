@@ -111,6 +111,7 @@ typedef enum laye_ast_type_access
 typedef enum laye_ast_modifier_kind
 {
     LAYE_AST_MODIFIER_INVALID,
+    LAYE_AST_MODIFIER_FOREIGN,
     LAYE_AST_MODIFIER_EXPORT,
     LAYE_AST_MODIFIER_CALLCONV,
     LAYE_AST_MODIFIER_INLINE,
@@ -126,6 +127,7 @@ typedef struct laye_ast_modifier
     union
     {
         laye_ast_node* callingConventionKind;
+        string foreignName;
     };
 } laye_ast_modifier;
 

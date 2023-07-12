@@ -1681,19 +1681,47 @@ static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
             MODIFIER_CASE(LAYE_TOKEN_INLINE, LAYE_AST_MODIFIER_INLINE);
 #undef MODIFIER_CASE
 
+            case LAYE_TOKEN_FOREIGN:
+            {
+                if (appliedModifiers[LAYE_AST_MODIFIER_FOREIGN]) {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Duplicate modifier.");
+                }
+                appliedModifiers[LAYE_AST_MODIFIER_FOREIGN] = true;
+
+                string foreignName = { 0 };
+                if (laye_parser_check(p, LAYE_TOKEN_LITERAL_STRING))
+                {
+                    current = laye_parser_current(p);
+                    foreignName = current->stringValue;
+                    laye_parser_advance(p);
+                }
+
+                laye_ast_modifier foreignModifier = (laye_ast_modifier){
+                    .kind = LAYE_AST_MODIFIER_FOREIGN,
+                    .location = current->location,
+                    .foreignName = foreignName,
+                };
+                arrput(modifiers, foreignModifier);
+            } break;
+
             case LAYE_TOKEN_CALLCONV:
             {
-                // TODO(local): parse calling convention expression
-                TODO("parse calling convention expression");
-
                 if (appliedModifiers[LAYE_AST_MODIFIER_CALLCONV]) {
                     layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Duplicate modifier.");
                 }
                 appliedModifiers[LAYE_AST_MODIFIER_CALLCONV] = true;
-
-                laye_ast_modifier callconvModifier = (laye_ast_modifier){ .kind = LAYE_AST_MODIFIER_CALLCONV, .location = current->location };
-                arrput(modifiers, callconvModifier);
                 laye_parser_advance(p);
+
+                laye_parser_expect(p, '(', nullptr);
+                laye_ast_node* callingConventionNode = laye_parse_expression(p);
+                laye_parser_expect(p, ')', nullptr);
+
+                laye_ast_modifier callconvModifier = (laye_ast_modifier){
+                    .kind = LAYE_AST_MODIFIER_CALLCONV,
+                    .location = current->location,
+                    .callingConventionKind = callingConventionNode,
+                };
+                arrput(modifiers, callconvModifier);
             } break;
 
             default: goto after_modifier_parse;
