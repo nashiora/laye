@@ -1209,8 +1209,14 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
     laye_token* current = laye_parser_current(p);
     assert(current != nullptr);
 
+    layec_location startLocation = current->location;
     switch (current->kind)
     {
+        case '{':
+        {
+            return laye_parse_grouped_statement(p);
+        }
+
         case LAYE_TOKEN_RETURN:
         {
             layec_location returnLocation = current->location;
@@ -1228,6 +1234,57 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
             laye_ast_node* returnNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_RETURN, returnLocation);
             returnNode->returnValue = returnValue;
             return returnNode;
+        }
+
+        case LAYE_TOKEN_IF:
+        {
+            layec_location lastLocation = startLocation;
+
+            list(laye_ast_conditional) conditionals = nullptr;
+            laye_ast_node* fail = nullptr;
+
+            while (laye_parser_check(p, LAYE_TOKEN_IF))
+            {
+                laye_parser_advance(p); // `if`
+                laye_ast_node* conditionNode = laye_parse_expression(p);
+                assert(conditionNode != nullptr);
+
+                laye_ast_node* conditionalBodyNode = nullptr;
+                laye_parser_expect(p, LAYE_TOKEN_THEN, nullptr);
+
+                if (laye_parser_check(p, LAYE_TOKEN_ELSE))
+                {
+                    conditionalBodyNode = laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, laye_parser_most_recent_location(p));
+                }
+                else conditionalBodyNode = laye_parse_statement(p);
+                assert(conditionalBodyNode != nullptr);
+
+                laye_ast_conditional conditional = {
+                    .condition = conditionNode,
+                    .body = conditionalBodyNode,
+                };
+                arrput(conditionals, conditional);
+                lastLocation = conditionalBodyNode->location;
+
+                if (laye_parser_check(p, LAYE_TOKEN_ELSE) && laye_parser_peek_check(p, LAYE_TOKEN_IF))
+                {
+                    laye_parser_advance(p);
+                }
+            }
+
+            if (laye_parser_check(p, LAYE_TOKEN_ELSE))
+            {
+                laye_parser_advance(p);
+                fail = laye_parse_statement(p);
+                assert(fail != nullptr);
+                lastLocation = fail->location;
+            }
+
+            layec_location location = layec_location_combine(startLocation, lastLocation);
+            laye_ast_node* ifNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_IF, location);
+            ifNode->_if.conditionals = conditionals;
+            ifNode->_if.fail = fail;
+            return ifNode;
         }
 
         default:

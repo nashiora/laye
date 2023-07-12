@@ -671,6 +671,19 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             laye_ast_fprint_node(state, node->returnValue, true);
         } break;
 
+        case LAYE_AST_NODE_STATEMENT_IF:
+        {
+            usize condLen = arrlenu(node->_if.conditionals);
+            for (usize i = 0; i < condLen; i++)
+            {
+                laye_ast_fprint_node(state, node->_if.conditionals[i].condition, false);
+                laye_ast_fprint_node(state, node->_if.conditionals[i].body, i == condLen - 1 && node->_if.fail == nullptr);
+            }
+
+            if (node->_if.fail != nullptr)
+                laye_ast_fprint_node(state, node->_if.fail, true);
+        } break;
+
         case LAYE_AST_NODE_EXPRESSION_INVOKE:
         {
             usize argLen = arrlenu(node->invoke.arguments);

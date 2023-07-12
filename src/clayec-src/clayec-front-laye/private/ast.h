@@ -192,6 +192,12 @@ typedef struct laye_ast_template_argument
     laye_ast_node* value;
 } laye_ast_template_argument;
 
+typedef struct laye_ast_conditional
+{
+    laye_ast_node* condition;
+    laye_ast_node* body;
+} laye_ast_conditional;
+
 struct laye_ast_node
 {
     laye_ast_node_kind kind;
@@ -278,6 +284,12 @@ struct laye_ast_node
 
         list(laye_ast_node*) statements;
         laye_ast_node* returnValue;
+
+        struct
+        {
+            list(laye_ast_conditional) conditionals;
+            laye_ast_node* fail;
+        } _if;
 
         struct
         {

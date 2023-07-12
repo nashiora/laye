@@ -1,48 +1,10 @@
-import "numbers.laye";
-
-struct vec<T, i32 N>
-{
-    T[N] data;
-}
-
-vec<T, N> operator + <T, i32 N>(vec<T, N> a, vec<T, N> b)
-{
-}
-
-struct list<T>
-{
-    allocator allocator;
-    T[*] values;
-}
-
-struct location
-{
-    uint offset;
-    uint length;
-}
-
-struct token
-{
-    location location;
-
-    variant void;
-    variant identifier;
-    variant string_literal { string value; }
-}
-
-enum color
-{
-    red, blue, green = 2
-}
-
 void main(readonly string[] argv)
 {
-    i32(string) parser = numbers::parse_i32;
-    i32 result = parser("123");
-    token name = token::string_literal {
-        value = "Local",
-    };
-    token? name2 = new(myalloc) ::string_literal {
-        value = "Lensor",
-    };
+    if test then
+        return 69;
+    else if test2 then
+    {
+        return 420;
+    }
+    else return 0;
 }
