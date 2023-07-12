@@ -1,10 +1,6 @@
+// import "stdio.h";
+
 void main(readonly string[] argv)
 {
-    if test then
-        return 69;
-    else if test2 then
-    {
-        return 420;
-    }
-    else return 0;
+    printf("Hello, hunter!");
 }

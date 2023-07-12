@@ -106,7 +106,9 @@
     K(CONST, "const") \
     K(FOREIGN, "foreign") \
     K(INLINE, "inline") \
-    K(CALLCONV, "callconv")
+    K(CALLCONV, "callconv") \
+    T(OPERATOR_INVOKE, "()") \
+    T(OPERATOR_INDEX, "[]")
 
 typedef enum laye_token_kind
 {

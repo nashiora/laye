@@ -43,7 +43,7 @@ static laye_operator_info layeOperatorInfos[] = {
     { '|',  30 },
     { '~',  30 },
     { LAYE_TOKEN_LESS_LESS,  30 },
-    { LAYE_TOKEN_GREATER_GREATER_EQUAL,  30 },
+    { LAYE_TOKEN_GREATER_GREATER,  30 },
 
     { '+', 40 },
     { '-', 40 },
@@ -1382,6 +1382,72 @@ static list(laye_ast_template_parameter) laye_parse_template_parameters(laye_par
     return result;
 }
 
+static laye_token_kind laye_parser_expect_overloadable_operator(laye_parser* p, layec_location* outLocation)
+{
+    assert(p != nullptr);
+
+    laye_token_kind operator = LAYE_TOKEN_INVALID;
+    layec_location totalLocation = { 0 };
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+
+    #define SIMPLE_OPERATOR(TK) case TK: \
+        operator = TK; \
+        totalLocation = current->location; \
+        laye_parser_advance(p); \
+        break;
+
+    switch (current->kind)
+    {
+        default:
+        {
+            layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Expected overloadable operator.");
+        } break;
+
+        SIMPLE_OPERATOR('+')
+        SIMPLE_OPERATOR('-')
+
+        SIMPLE_OPERATOR('*')
+        SIMPLE_OPERATOR('/')
+        SIMPLE_OPERATOR('%')
+        
+        SIMPLE_OPERATOR('&')
+        SIMPLE_OPERATOR('|')
+        SIMPLE_OPERATOR('~')
+        
+        SIMPLE_OPERATOR(LAYE_TOKEN_LESS_LESS)
+        SIMPLE_OPERATOR(LAYE_TOKEN_GREATER_GREATER)
+        
+        SIMPLE_OPERATOR('<')
+        SIMPLE_OPERATOR('>')
+        SIMPLE_OPERATOR(LAYE_TOKEN_LESS_EQUAL)
+        SIMPLE_OPERATOR(LAYE_TOKEN_GREATER_EQUAL)
+
+        case '(':
+        {
+            operator = LAYE_TOKEN_OPERATOR_INVOKE;
+            totalLocation = current->location;
+            laye_parser_advance(p);
+            laye_parser_expect_out(p, ')', nullptr, &current);
+            totalLocation = layec_location_combine(totalLocation, current->location);
+        } break;
+
+        case '[':
+        {
+            operator = LAYE_TOKEN_OPERATOR_INVOKE;
+            totalLocation = current->location;
+            laye_parser_advance(p);
+            laye_parser_expect_out(p, ']', nullptr, &current);
+            totalLocation = layec_location_combine(totalLocation, current->location);
+        } break;
+    }
+
+    if (outLocation != nullptr)
+        *outLocation = totalLocation;
+    return operator;
+}
+
 static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_ast_modifier) modifiers, laye_ast_node* declType, string name, layec_location nameLocation, laye_token_kind operator)
 {
     assert(p != nullptr);
@@ -1396,7 +1462,6 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         templateParameters = laye_parse_template_parameters(p);
     }
 
-    // TODO(local): parse functions
     if (laye_parser_check(p, '('))
     {
         laye_parser_advance(p);
@@ -1737,11 +1802,9 @@ after_modifier_parse:;
                 {
                     declNameLocation = laye_parser_current(p)->location;
                     laye_parser_advance(p);
-                    // TODO(local): more complicated operators like [] and []=
-                    laye_token* operatorToken = laye_parser_current(p);
-                    declNameLocation = layec_location_combine(declNameLocation, operatorToken->location);
-                    operator = operatorToken->kind;
-                    laye_parser_advance(p);
+                    layec_location operatorLocation = { 0 };
+                    operator = laye_parser_expect_overloadable_operator(p, &operatorLocation);
+                    declNameLocation = layec_location_combine(declNameLocation, operatorLocation);
                 }
                 else if (laye_parser_check(p, LAYE_TOKEN_IDENTIFIER))
                 {
