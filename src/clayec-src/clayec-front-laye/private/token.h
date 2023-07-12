@@ -103,6 +103,7 @@
     K(AND, "and") \
     K(OR, "or") \
     K(XOR, "xor") \
+    K(VARARGS, "varargs") \
     K(CONST, "const") \
     K(FOREIGN, "foreign") \
     K(INLINE, "inline") \

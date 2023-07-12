@@ -41,12 +41,17 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
         {
             type_to_string_builder(typeNode->functionType.returnType, sb);
             string_builder_append_rune(sb, cast(rune) '(');
+            bool isLayeVarargs = typeNode->functionType.varargsKind == LAYE_AST_VARARGS_LAYE;
             for (usize i = 0, iLen = arrlenu(typeNode->functionType.parameterTypes); i < iLen; i++)
             {
                 if (i > 0)
                     string_builder_append_cstring(sb, ", ");
+                if (i == iLen - 1 && isLayeVarargs)
+                    string_builder_append_cstring(sb, "varargs ");
                 type_to_string_builder(typeNode->functionType.parameterTypes[i], sb);
             }
+            if (typeNode->functionType.varargsKind == LAYE_AST_VARARGS_C)
+                string_builder_append_cstring(sb, ", varargs");
             string_builder_append_rune(sb, cast(rune) ')');
             if (typeNode->functionType.isNilable)
                 string_builder_append_rune(sb, cast(rune) '?');
@@ -140,7 +145,7 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
             else if (typeNode->primitiveType.access == LAYE_AST_ACCESS_WRITEONLY)
                 string_builder_append_cstring(sb, "writeonly ");
             string_builder_append_cstring(sb, "string");
-            break;
+            goto check_primitive_nilable;
         case LAYE_AST_NODE_TYPE_RUNE: string_builder_append_cstring(sb, "rune"); goto check_primitive_nilable;
         case LAYE_AST_NODE_TYPE_BOOL: string_builder_append_cstring(sb, "bool"); goto check_primitive_nilable;
         case LAYE_AST_NODE_TYPE_INT: string_builder_append_cstring(sb, "int"); goto check_primitive_nilable;
@@ -495,10 +500,14 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, STRING_FORMAT"(", STRING_EXPAND(returnTypeString));
             string_deallocate(returnTypeString);
 
+            bool isLayeVarargs = node->functionDeclaration.varargsKind == LAYE_AST_VARARGS_LAYE;
             for (usize i = 0, len = arrlenu(node->functionDeclaration.parameterBindings); i < len; i++)
             {
                 if (i > 0)
                     fprintf(state.stream, ", ");
+
+                if (i == len - 1 && isLayeVarargs)
+                    fprintf(state.stream, "varargs ");
 
                 laye_ast_node* parameterBinding = node->functionDeclaration.parameterBindings[i];
 
@@ -506,6 +515,9 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
                 fprintf(state.stream, STRING_FORMAT" "STRING_FORMAT, STRING_EXPAND(paramTypeString), STRING_EXPAND(parameterBinding->bindingDeclaration.name));
                 string_deallocate(paramTypeString);
             }
+
+            if (node->functionDeclaration.varargsKind == LAYE_AST_VARARGS_C)
+                fprintf(state.stream, ", varargs");
 
             fprintf(state.stream, ")");
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);

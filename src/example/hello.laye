@@ -1,8 +1,9 @@
 // import "stdio.h";
 
-foreign i32 printf(readonly c_string format);
+foreign i32 printf(readonly c_string format, varargs);
 
 void main(readonly string[] argv)
 {
+    i32(readonly c_string, varargs) printf_function = printf;
     printf("Hello, hunter!\n");
 }

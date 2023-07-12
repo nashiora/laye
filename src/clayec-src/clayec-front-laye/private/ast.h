@@ -200,6 +200,13 @@ typedef struct laye_ast_conditional
     laye_ast_node* body;
 } laye_ast_conditional;
 
+typedef enum laye_ast_varargs_kind
+{
+    LAYE_AST_VARARGS_NONE,
+    LAYE_AST_VARARGS_LAYE,
+    LAYE_AST_VARARGS_C,
+} laye_ast_varargs_kind;
+
 struct laye_ast_node
 {
     laye_ast_node_kind kind;
@@ -207,7 +214,7 @@ struct laye_ast_node
 
     union
     {
-        union
+        struct
         {
             // for primitive container types like strings
             laye_ast_type_access access;
@@ -238,6 +245,7 @@ struct laye_ast_node
         {
             laye_ast_node* returnType;
             list(laye_ast_node*) parameterTypes;
+            laye_ast_varargs_kind varargsKind;
             bool isNilable;
         } functionType;
 
@@ -258,6 +266,7 @@ struct laye_ast_node
             laye_token_kind operator;
             list(laye_ast_template_parameter) templateParameters;
             list(laye_ast_node*) parameterBindings;
+            laye_ast_varargs_kind varargsKind;
             laye_ast_node* body;
         } functionDeclaration;
 

@@ -603,15 +603,32 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             laye_parser_advance(p);
 
             list(laye_ast_node*) parameterTypes = nullptr;
-            bool endsWithComma = false;
+            laye_ast_varargs_kind varargsKind = LAYE_AST_VARARGS_NONE;
+            bool hasReportedBadVarargs = false;
             while (!laye_parser_is_eof(p) && !laye_parser_check(p, ')'))
             {
-                endsWithComma = false;
-                if (laye_parser_check(p, ','))
+                if (varargsKind != LAYE_AST_VARARGS_NONE && !hasReportedBadVarargs)
                 {
-                    layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Type expected as function type parameter.");
+                    hasReportedBadVarargs = true;
+                    layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_most_recent_location(p), "A varargs parameter must be the last parameter.");
+                }
+
+                if (laye_parser_check(p, LAYE_TOKEN_VARARGS))
+                {
                     laye_parser_advance(p);
-                    continue;
+                    if (laye_parser_check(p, ')'))
+                    {
+                        varargsKind = LAYE_AST_VARARGS_C;
+                        break;
+                    }
+
+                    if (laye_parser_check(p, ','))
+                    {
+                        varargsKind = LAYE_AST_VARARGS_C;
+                        continue;
+                    }
+
+                    varargsKind = LAYE_AST_VARARGS_LAYE;
                 }
 
                 laye_ast_node* parameterType = nullptr;
@@ -628,25 +645,17 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
 
                 if (!laye_parser_check(p, ','))
                     break;
+
                 laye_parser_advance(p);
-                endsWithComma = true;
+                if (!laye_parser_check(p, ')'))
+                    continue;
+
+                layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Expected parameter.");
+                break;
             }
 
             current = laye_parser_current(p);
             laye_parser_expect(p, ')', nullptr);
-
-            if (endsWithComma)
-            {
-                if (issueDiagnostics)
-                {
-                    layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type expected as function type parameter.");
-                }
-                else
-                {
-                    p->currentTokenIndex = startIndex;
-                    return false;
-                }
-            }
 
             if (laye_parser_check(p, '?'))
             {
@@ -658,6 +667,7 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             laye_ast_node* newType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_FUNCTION, typeLocation);
             newType->functionType.returnType = *typeSyntax;
             newType->functionType.parameterTypes = parameterTypes;
+            newType->functionType.varargsKind = varargsKind;
             newType->functionType.isNilable = isNilable;
             *typeSyntax = newType;
             return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
@@ -736,19 +746,18 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Type cannot be readonly/writeonly."); \
             } else type->primitiveType.access = access; \
             if (SX) type->primitiveType.size = current->sizeParameter; \
+            laye_parser_advance(p); \
             if (laye_parser_check(p, '?')) { \
                 laye_parser_advance(p); \
-                type->primitiveType.isNilable = isNilable; \
+                type->primitiveType.isNilable = true; \
             } \
             *outTypeSyntax = type; \
-            laye_parser_advance(p); \
             return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics); \
         }
 
     list(string) path = nullptr;
     string identifierName = { 0 };
     bool isPathHeadless = false;
-    bool isNilable = false;
     switch (current->kind)
     {
         case LAYE_TOKEN_COLON_COLON:
@@ -782,6 +791,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 templateArguments = laye_parse_template_arguments(p);
             }
 
+            bool isNilable = false;
             if (laye_parser_check(p, '?'))
             {
                 laye_parser_advance(p);
@@ -1551,10 +1561,27 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         laye_parser_advance(p);
 
         list(laye_ast_node*) parameterBindingNodes = nullptr;
-        while (!laye_parser_is_eof(p))
+        laye_ast_varargs_kind varargsKind = LAYE_AST_VARARGS_NONE;
+        bool hasReportedBadVarargs = false;
+        while (!laye_parser_is_eof(p) && !laye_parser_check(p, ')'))
         {
-            if (laye_parser_check(p, ')'))
-                break;
+            if (varargsKind != LAYE_AST_VARARGS_NONE && !hasReportedBadVarargs)
+            {
+                hasReportedBadVarargs = true;
+                layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_most_recent_location(p), "A varargs parameter must be the last parameter.");
+            }
+
+            if (laye_parser_check(p, LAYE_TOKEN_VARARGS))
+            {
+                laye_parser_advance(p);
+                if (laye_parser_check(p, ')'))
+                {
+                    varargsKind = LAYE_AST_VARARGS_C;
+                    break;
+                }
+
+                varargsKind = LAYE_AST_VARARGS_LAYE;
+            }
 
             laye_ast_node* paramTypeSyntax = nullptr;
             laye_token* paramNameToken = nullptr;
@@ -1589,12 +1616,15 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
 
             arrput(parameterBindingNodes, paramBinding);
             
-            if (laye_parser_check(p, ','))
-            {
-                laye_parser_advance(p);
+            if (!laye_parser_check(p, ','))
+                break;
+
+            laye_parser_advance(p);
+            if (!laye_parser_check(p, ')'))
                 continue;
-            }
-            else break;
+
+            layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Expected parameter.");
+            break;
         }
 
         laye_parser_expect(p, ')', nullptr);
@@ -1622,6 +1652,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
         functionDeclaration->functionDeclaration.templateParameters = templateParameters;
         functionDeclaration->functionDeclaration.parameterBindings = parameterBindingNodes;
         functionDeclaration->functionDeclaration.body = functionBody;
+        functionDeclaration->functionDeclaration.varargsKind = varargsKind;
 
         return functionDeclaration;
     }
