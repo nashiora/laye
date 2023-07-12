@@ -2,5 +2,9 @@
 
 void main(readonly string[] argv)
 {
-    printf("Hello, hunter!");
+    while test do
+    {
+        printf("Hello, hunter!");
+    }
+    else printf("Goodbye, hunter!");
 }

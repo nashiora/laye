@@ -1254,6 +1254,7 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
 
                 if (laye_parser_check(p, LAYE_TOKEN_ELSE))
                 {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_most_recent_location(p), "Statement expected.");
                     conditionalBodyNode = laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, laye_parser_most_recent_location(p));
                 }
                 else conditionalBodyNode = laye_parse_statement(p);
@@ -1284,6 +1285,46 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
             laye_ast_node* ifNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_IF, location);
             ifNode->_if.conditionals = conditionals;
             ifNode->_if.fail = fail;
+            return ifNode;
+        }
+
+        case LAYE_TOKEN_WHILE:
+        {
+            layec_location lastLocation = startLocation;
+
+            laye_ast_node* condition = nullptr;
+            laye_ast_node* pass = nullptr;
+            laye_ast_node* fail = nullptr;
+
+            laye_parser_advance(p); // `while`
+            condition = laye_parse_expression(p);
+            assert(condition != nullptr);
+
+            laye_parser_expect(p, LAYE_TOKEN_DO, nullptr);
+
+            if (laye_parser_check(p, LAYE_TOKEN_ELSE))
+            {
+                layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_most_recent_location(p), "Statement expected.");
+                pass = laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, laye_parser_most_recent_location(p));
+            }
+            else pass = laye_parse_statement(p);
+            assert(pass != nullptr);
+
+            lastLocation = pass->location;
+
+            if (laye_parser_check(p, LAYE_TOKEN_ELSE))
+            {
+                laye_parser_advance(p);
+                fail = laye_parse_statement(p);
+                assert(fail != nullptr);
+                lastLocation = fail->location;
+            }
+
+            layec_location location = layec_location_combine(startLocation, lastLocation);
+            laye_ast_node* ifNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_WHILE, location);
+            ifNode->_while.condition = condition;
+            ifNode->_while.pass = pass;
+            ifNode->_while.fail = fail;
             return ifNode;
         }
 

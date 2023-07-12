@@ -293,6 +293,13 @@ struct laye_ast_node
 
         struct
         {
+            laye_ast_node* condition;
+            laye_ast_node* pass;
+            laye_ast_node* fail;
+        } _while;
+
+        struct
+        {
             list(string) path;
             list(laye_ast_template_argument) templateArguments;
             bool isHeadless;
