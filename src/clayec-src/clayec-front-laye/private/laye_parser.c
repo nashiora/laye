@@ -1093,6 +1093,16 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             return laye_parse_primary_suffix(p, resultNode);
         }
 
+        case LAYE_TOKEN_TRUE:
+        case LAYE_TOKEN_FALSE:
+        {
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_BOOL, current->location);
+            assert(resultNode != nullptr);
+            resultNode->literal.boolValue = current->kind == LAYE_TOKEN_TRUE;
+            laye_parser_advance(p);
+            return laye_parse_primary_suffix(p, resultNode);
+        }
+
         default:
         {
             layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Unexpected token when parsing expression.");

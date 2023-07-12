@@ -555,6 +555,18 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, ">");
         } break;
 
+        case LAYE_AST_NODE_EXPRESSION_BOOL:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Value: ");
+            RESETCOLOR;
+            fprintf(state.stream, "%s", node->literal.boolValue ? "true" : "false");
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+
         case LAYE_AST_NODE_EXPRESSION_BINARY:
         {
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);

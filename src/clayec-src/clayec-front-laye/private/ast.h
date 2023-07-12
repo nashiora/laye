@@ -84,8 +84,7 @@
     A(EXPRESSION_CONSTRUCTOR) \
     A(EXPRESSION_NEW) \
     A(EXPRESSION_NIL) \
-    A(EXPRESSION_TRUE) \
-    A(EXPRESSION_FALSE) \
+    A(EXPRESSION_BOOL) \
     A(EXPRESSION_STRING) \
     A(EXPRESSION_INTEGER) \
     LAYE_AST_TYPE_KINDS
@@ -312,6 +311,7 @@ struct laye_ast_node
         {
             u64 integerValue;
             string stringValue;
+            bool boolValue;
         } literal;
         
         struct
