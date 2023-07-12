@@ -915,6 +915,91 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
 
             return laye_parse_primary_suffix(p, invokeExpression);
         } break;
+
+        case '[':
+        {
+            laye_parser_advance(p);
+
+            if (laye_parser_check(p, ':'))
+            {
+                laye_parser_advance(p);
+                laye_ast_node* sliceLengthNode = nullptr;
+                if (!laye_parser_check(p, ']'))
+                {
+                    sliceLengthNode = laye_parse_expression(p);   
+                    assert(sliceLengthNode != nullptr);
+                }
+                laye_parser_expect(p, ']', nullptr);
+
+                laye_ast_node* sliceExpression = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_SLICE, expression->location);
+                sliceExpression->slice.target = expression;
+                sliceExpression->slice.length = sliceLengthNode;
+
+                return laye_parse_primary_suffix(p, sliceExpression);
+            }
+
+            laye_ast_node* firstExpression = laye_parse_expression(p);
+            assert(firstExpression != nullptr);
+
+            if (laye_parser_check(p, ':'))
+            {
+                laye_parser_advance(p);
+                laye_ast_node* sliceLengthNode = nullptr;
+                if (!laye_parser_check(p, ']'))
+                {
+                    sliceLengthNode = laye_parse_expression(p);   
+                    assert(sliceLengthNode != nullptr);
+                }
+                laye_parser_expect(p, ']', nullptr);
+
+                laye_ast_node* sliceExpression = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_SLICE, expression->location);
+                sliceExpression->slice.target = expression;
+                sliceExpression->slice.offset = firstExpression;
+                sliceExpression->slice.length = sliceLengthNode;
+
+                return laye_parse_primary_suffix(p, sliceExpression);
+            }
+
+            list(laye_ast_node*) indexArguments = nullptr;
+            arrput(indexArguments, firstExpression);
+
+            if (laye_parser_check(p, ','))
+            {
+                laye_parser_advance(p);
+                if (laye_parser_check(p, ']'))
+                {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Expression expected");
+                }
+                else
+                {
+                    do
+                    {
+                        laye_ast_node* arg = laye_parse_expression(p);
+                        assert(arg != nullptr);
+                        arrput(indexArguments, arg);
+
+                        if (!laye_parser_check(p, ','))
+                            break;
+                        
+                        laye_parser_advance(p);
+                        if (!laye_parser_check(p, ']'))
+                            continue;
+
+                        layec_issue_diagnostic(p->context, SEV_ERROR, laye_parser_current(p)->location, "Expression expected");
+                        break;
+                    }
+                    while (!laye_parser_is_eof(p) && !laye_parser_check(p, ']'));
+                }
+            }
+            
+            laye_parser_expect(p, ']', nullptr);
+
+            laye_ast_node* sliceExpression = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_INDEX, expression->location);
+            sliceExpression->container_index.target = expression;
+            sliceExpression->container_index.arguments = indexArguments;
+
+            return laye_parse_primary_suffix(p, sliceExpression);
+        } break;
     }
 
     return expression;

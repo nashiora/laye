@@ -777,6 +777,23 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
                 laye_ast_fprint_node(state, node->invoke.arguments[i], i == argLen - 1);
         } break;
 
+        case LAYE_AST_NODE_EXPRESSION_SLICE:
+        {
+            laye_ast_fprint_node(state, node->slice.target, node->slice.offset == nullptr && node->slice.length == nullptr);
+            if (node->slice.offset != nullptr)
+                laye_ast_fprint_node(state, node->slice.offset, node->slice.length == nullptr);
+            if (node->slice.length != nullptr)
+                laye_ast_fprint_node(state, node->slice.length, true);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_INDEX:
+        {
+            usize argLen = arrlenu(node->container_index.arguments);
+            laye_ast_fprint_node(state, node->container_index.target, argLen == 0);
+            for (usize i = 0; i < argLen; i++)
+                laye_ast_fprint_node(state, node->container_index.arguments[i], i == argLen - 1);
+        } break;
+
         case LAYE_AST_NODE_EXPRESSION_BINARY:
         {
             laye_ast_fprint_node(state, node->binary.lhs, false);

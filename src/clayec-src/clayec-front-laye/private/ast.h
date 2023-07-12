@@ -82,6 +82,8 @@
     A(EXPRESSION_TYPECAST) \
     A(EXPRESSION_LOOKUP) \
     A(EXPRESSION_CONSTRUCTOR) \
+    A(EXPRESSION_SLICE) \
+    A(EXPRESSION_INDEX) \
     A(EXPRESSION_NEW) \
     A(EXPRESSION_NIL) \
     A(EXPRESSION_BOOL) \
@@ -328,6 +330,25 @@ struct laye_ast_node
             laye_ast_node* target;
             list(laye_ast_node*) arguments;
         } invoke;
+        
+        struct
+        {
+            laye_ast_node* target;
+            laye_ast_node* offset;
+            laye_ast_node* length;
+        } slice;
+        
+        struct
+        {
+            laye_ast_node* target;
+            list(laye_ast_node*) arguments;
+        } container_index;
+        
+        struct
+        {
+            laye_ast_node* target;
+            string name;
+        } field_index;
 
         struct
         {
