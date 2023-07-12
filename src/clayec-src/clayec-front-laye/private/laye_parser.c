@@ -999,7 +999,20 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
             sliceExpression->container_index.arguments = indexArguments;
 
             return laye_parse_primary_suffix(p, sliceExpression);
-        } break;
+        }
+
+        case '.':
+        {
+            laye_parser_advance(p);
+            laye_token* nameToken = laye_parser_expect_identifier(p, nullptr);
+            string name = layec_intern_location_text(p->context, nameToken->location);
+            
+            laye_ast_node* sliceExpression = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_FIELD_INDEX, expression->location);
+            sliceExpression->field_index.target = expression;
+            sliceExpression->field_index.name = name;
+
+            return laye_parse_primary_suffix(p, sliceExpression);
+        }
     }
 
     return expression;
@@ -1062,7 +1075,14 @@ static laye_ast_node* laye_parse_identifier_suffix(laye_parser* p, laye_ast_node
             layec_location lastLocation = { 0 };
             list(laye_ast_constructor_value) values = laye_parse_constructor(p, &lastLocation);
 
+            list(string) path = expression->lookup.path;
+            bool isHeadless = expression->lookup.isHeadless;
+            list(laye_ast_template_argument) templateArguments = expression->lookup.templateArguments;
+
             expression->kind = LAYE_AST_NODE_TYPE_NAMED;
+            expression->lookupType.path = path;
+            expression->lookupType.isHeadless = isHeadless;
+            expression->lookupType.templateArguments = templateArguments;
 
             layec_location location = layec_location_combine(expression->location, lastLocation);
             laye_ast_node* constructorNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR, location);

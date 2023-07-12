@@ -639,20 +639,14 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
 
         case LAYE_AST_NODE_EXPRESSION_CONSTRUCTOR:
         {
-            laye_ast_node* typeNode = node->constructor.typeName;
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, " <");
             PUTCOLOR(ANSI_COLOR_BLUE);
-            fprintf(state.stream, "Path: ");
+            fprintf(state.stream, "Type: ");
             RESETCOLOR;
-            if (typeNode->lookupType.isHeadless)
-                fprintf(state.stream, "::");
-            for (usize i = 0, iLen = arrlenu(typeNode->lookupType.path); i < iLen; i++)
-            {
-                if (i > 0)
-                    fprintf(state.stream, "::");
-                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeNode->lookupType.path[i]));
-            }
+            string typeString = laye_ast_node_type_to_string(node->constructor.typeName);
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeString));
+            string_deallocate(typeString);
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
@@ -667,6 +661,18 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             string typeString = laye_ast_node_type_to_string(node->new.type);
             fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(typeString));
             string_deallocate(typeString);
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_FIELD_INDEX:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            fprintf(state.stream, "Field Name: ");
+            RESETCOLOR;
+            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->field_index.name));
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
@@ -792,6 +798,11 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             laye_ast_fprint_node(state, node->container_index.target, argLen == 0);
             for (usize i = 0; i < argLen; i++)
                 laye_ast_fprint_node(state, node->container_index.arguments[i], i == argLen - 1);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_FIELD_INDEX:
+        {
+            laye_ast_fprint_node(state, node->container_index.target, true);
         } break;
 
         case LAYE_AST_NODE_EXPRESSION_BINARY:
