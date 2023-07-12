@@ -1688,6 +1688,7 @@ static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
     list(laye_ast_modifier) modifiers = nullptr;
     bool appliedModifiers[LAYE_AST_MODIFIER_COUNT] = { 0 };
 
+    usize startIndex = p->currentTokenIndex;
     while (!laye_parser_is_eof(p))
     {
         current = laye_parser_current(p);
@@ -1714,6 +1715,7 @@ static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
                     layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Duplicate modifier.");
                 }
                 appliedModifiers[LAYE_AST_MODIFIER_FOREIGN] = true;
+                laye_parser_advance(p);
 
                 string foreignName = { 0 };
                 if (laye_parser_check(p, LAYE_TOKEN_LITERAL_STRING))
@@ -1753,6 +1755,8 @@ static laye_ast_node* laye_parse_declaration_or_statement(laye_parser* p)
 
             default: goto after_modifier_parse;
         }
+
+        assert(startIndex != p->currentTokenIndex);
     }
 
 after_modifier_parse:;

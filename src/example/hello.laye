@@ -1,5 +1,7 @@
 // import "stdio.h";
 
+foreign i32 printf(readonly c_string format);
+
 void main(readonly string[] argv)
 {
     printf("Hello, hunter!\n");

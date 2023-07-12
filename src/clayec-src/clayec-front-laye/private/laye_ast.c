@@ -510,6 +510,51 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             fprintf(state.stream, ")");
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
+
+            usize modifiersLen = arrlen(node->functionDeclaration.modifiers);
+            for (usize i = 0; i < modifiersLen; i++)
+            {
+                laye_ast_modifier modifier = node->functionDeclaration.modifiers[i];
+                switch (modifier.kind)
+                {
+                    default: break;
+                    case LAYE_AST_MODIFIER_EXPORT:
+                    {
+                        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                        fprintf(state.stream, " <");
+                        PUTCOLOR(ANSI_COLOR_BLUE);
+                        fprintf(state.stream, "Export");
+                        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                        fprintf(state.stream, ">");
+                    } break;
+                    
+                    case LAYE_AST_MODIFIER_INLINE:
+                    {
+                        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                        fprintf(state.stream, " <");
+                        PUTCOLOR(ANSI_COLOR_BLUE);
+                        fprintf(state.stream, "Inline");
+                        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                        fprintf(state.stream, ">");
+                    } break;
+                    
+                    case LAYE_AST_MODIFIER_FOREIGN:
+                    {
+                        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                        fprintf(state.stream, " <");
+                        PUTCOLOR(ANSI_COLOR_BLUE);
+                        fprintf(state.stream, "Foreign");
+                        if (modifier.foreignName.count > 0)
+                        {
+                            fprintf(state.stream, ": ");
+                            RESETCOLOR;
+                            fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(modifier.foreignName));
+                        }
+                        PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+                        fprintf(state.stream, ">");
+                    } break;
+                }
+            }
         } break;
 
         case LAYE_AST_NODE_EXPRESSION_LOOKUP:
@@ -538,6 +583,7 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             PUTCOLOR(ANSI_COLOR_BLUE);
             fprintf(state.stream, "Value: ");
             RESETCOLOR;
+            // TODO(local): it's actually awkward to print newlines, should we do anything about that?
             fprintf(state.stream, "\""STRING_FORMAT"\"", STRING_EXPAND(node->literal.stringValue));
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
