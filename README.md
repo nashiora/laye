@@ -2,7 +2,7 @@
 
 ## Usage
 
-### layec
+### clayec
 
 ## Building and Installing from Source
 
@@ -14,6 +14,12 @@ Once CMake is installed and configured, you're able to build Laye's source. Simp
 ```
 cmake -B build
 cmake --build build
+```
+
+## Running the compiler on an example file
+
+```
+./build/clayec ./src/example/hello.laye
 ```
 
 ## Contributing
