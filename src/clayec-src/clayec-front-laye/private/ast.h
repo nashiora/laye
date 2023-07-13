@@ -77,10 +77,14 @@
     A(STATEMENT_CONTINUE) \
     A(STATEMENT_BREAK) \
     A(STATEMENT_YIELD) \
+    A(STATEMENT_YIELD_RETURN) \
+    A(STATEMENT_YIELD_BREAK) \
     A(EXPRESSION_UNARY) \
     A(EXPRESSION_BINARY) \
     A(EXPRESSION_INVOKE) \
     A(EXPRESSION_TYPECAST) \
+    A(EXPRESSION_TRY) \
+    A(EXPRESSION_CATCH) \
     A(EXPRESSION_LOOKUP) \
     A(EXPRESSION_CONSTRUCTOR) \
     A(EXPRESSION_SLICE) \
@@ -308,6 +312,16 @@ struct laye_ast_node
 
         struct
         {
+            string target;
+        } _break;
+
+        struct
+        {
+            string target;
+        } _continue;
+
+        struct
+        {
             list(laye_ast_conditional) conditionals;
             laye_ast_node* fail;
         } _if;
@@ -379,6 +393,18 @@ struct laye_ast_node
             laye_ast_node* type;
             list(laye_ast_constructor_value) values;
         } new;
+
+        struct
+        {
+            laye_ast_node* target;
+        } try;
+
+        struct
+        {
+            laye_ast_node* target;
+            string captureName;
+            laye_ast_node* body;
+        } catch;
     };
 };
 

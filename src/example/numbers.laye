@@ -3,7 +3,7 @@ export i32 get_nice_number()
     return 34 + 35;
 }
 
-export i32 parse_i32(string input)
+export !i32 parse_i32(string input)
 {
     return 0;
 }

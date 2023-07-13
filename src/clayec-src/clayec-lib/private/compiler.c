@@ -168,7 +168,7 @@ string layec_intern_string_view(layec_context* context, string_view view)
     assert(context != nullptr);
 
     if (view.count == 0)
-        return (string){ .memory = "<empty>", .allocator = nullptr, .count = 7 };
+        return (string){ .memory = cast(const uchar*) "<empty>", .allocator = nullptr, .count = 7 };
 
     usize internCount = arrlenu(context->internedStrings);
     for (usize i = 0; i < internCount; i++)
@@ -202,7 +202,7 @@ string layec_intern_location_text(layec_context* context, layec_location locatio
     assert(context != nullptr);
 
     if (location.length == 0)
-        return (string){ .memory = "<empty>", .allocator = nullptr, .count = 7 };
+        return (string){ .memory = cast(const uchar*) "<empty>", .allocator = nullptr, .count = 7 };
 
     string sourceText = layec_context_get_file_source(context, location.fileId);
     const char* locationText = cast(const char*)(sourceText.memory + location.offset);

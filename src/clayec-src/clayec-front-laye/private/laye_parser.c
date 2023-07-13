@@ -913,6 +913,8 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
     return laye_parser_try_parse_type_impl(p, outTypeSyntax, issueDiagnostics, true);
 }
 
+static laye_ast_node* laye_parse_statement(laye_parser* p);
+
 static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* expression)
 {
     assert(p != nullptr);
@@ -1069,6 +1071,36 @@ static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* e
 
             return laye_parse_primary_suffix(p, sliceExpression);
         }
+
+        case LAYE_TOKEN_CATCH:
+        {
+            layec_location startLocation = current->location;
+            laye_parser_advance(p);
+
+            string captureName = { 0 };
+            if (laye_parser_check(p, '('))
+            {
+                laye_parser_advance(p);
+                laye_token* captureNameToken = laye_parser_expect_identifier(p, nullptr);
+                captureName = layec_intern_location_text(p->context, captureNameToken->location);
+                laye_parser_expect(p, ')', nullptr);
+            }
+
+            laye_ast_node* body = laye_parse_statement(p);
+            assert(body != nullptr);
+
+            if (p->tokens[p->currentTokenIndex - 1]->kind == ';')
+            {
+                p->currentTokenIndex--;
+            }
+
+            layec_location location = layec_location_combine(startLocation, body->location);
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_CATCH, location);
+            resultNode->catch.target = expression;
+            resultNode->catch.captureName = captureName;
+            resultNode->catch.body = body;
+            return resultNode;
+        }
     }
 
     return expression;
@@ -1209,6 +1241,19 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             resultNode->lookup.templateArguments = templateArguments;
             resultNode->lookup.isHeadless = isPathHeadless;
             return laye_parse_identifier_suffix(p, resultNode);
+        }
+
+        case LAYE_TOKEN_TRY:
+        {
+            layec_location startLocation = current->location;
+            laye_parser_advance(p);
+
+            laye_ast_node* thingToTry = laye_parse_primary(p);
+
+            laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_EXPRESSION_TRY, startLocation);
+            assert(resultNode != nullptr);
+            resultNode->try.target = thingToTry;
+            return laye_parse_primary_suffix(p, resultNode);
         }
 
         case LAYE_TOKEN_NEW:
@@ -1432,6 +1477,54 @@ static laye_ast_node* laye_parse_statement(laye_parser* p)
             laye_parser_advance(p);
             laye_parser_expect(p, ';', nullptr);
             return resultNode;
+        }
+
+        case LAYE_TOKEN_YIELD:
+        {
+            laye_parser_advance(p);
+
+            if (laye_parser_check(p, LAYE_TOKEN_RETURN))
+            {
+                layec_location returnLocation = layec_location_combine(startLocation, current->location);
+                laye_parser_advance(p);
+
+                laye_ast_node* returnValue = nullptr;
+                if (!laye_parser_check(p, ';'))
+                {
+                    returnValue = laye_parse_expression(p);
+                    returnLocation = layec_location_combine(startLocation, returnValue->location);
+                }
+
+                laye_parser_expect(p, ';', nullptr);
+
+                laye_ast_node* returnNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_YIELD_RETURN, returnLocation);
+                returnNode->returnValue = returnValue;
+                return returnNode;
+            }
+            else if (laye_parser_check(p, LAYE_TOKEN_BREAK))
+            {
+                layec_location returnLocation = layec_location_combine(startLocation, current->location);
+                laye_parser_advance(p);
+                laye_parser_expect(p, ';', nullptr);
+                laye_ast_node* resultNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_YIELD_BREAK, current->location);
+                return resultNode;
+            }
+
+            layec_location yieldLocation = current->location;
+
+            laye_ast_node* yieldValue = nullptr;
+            if (!laye_parser_check(p, ';'))
+            {
+                yieldValue = laye_parse_expression(p);
+                assert(yieldValue != nullptr);
+                yieldLocation = layec_location_combine(yieldLocation, yieldValue->location);
+            }
+
+            laye_parser_expect(p, ';', nullptr);
+
+            laye_ast_node* yieldNode = laye_ast_node_alloc(p, LAYE_AST_NODE_STATEMENT_YIELD, yieldLocation);
+            yieldNode->returnValue = yieldValue;
+            return yieldNode;
         }
 
         case LAYE_TOKEN_IF:

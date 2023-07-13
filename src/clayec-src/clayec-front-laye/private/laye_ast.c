@@ -692,6 +692,22 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");
         } break;
+
+        case LAYE_AST_NODE_EXPRESSION_CATCH:
+        {
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, " <");
+            PUTCOLOR(ANSI_COLOR_BLUE);
+            if (node->catch.captureName.count > 0)
+            {
+                fprintf(state.stream, "Capture Name: ");
+                RESETCOLOR;
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->catch.captureName));
+            }
+            else fprintf(state.stream, "No Capture");
+            PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
+            fprintf(state.stream, ">");
+        } break;
     }
 
     RESETCOLOR;
@@ -759,8 +775,11 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
         } break;
 
         case LAYE_AST_NODE_STATEMENT_RETURN:
+        case LAYE_AST_NODE_STATEMENT_YIELD:
+        case LAYE_AST_NODE_STATEMENT_YIELD_RETURN:
         {
-            laye_ast_fprint_node(state, node->returnValue, true);
+            if (node->returnValue != nullptr)
+                laye_ast_fprint_node(state, node->returnValue, true);
         } break;
 
         case LAYE_AST_NODE_STATEMENT_IF:
@@ -841,6 +860,17 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
                 laye_ast_fprint_node(state, node->new.allocator, fieldsLen == 0);
             for (usize i = 0; i < fieldsLen; i++)
                 laye_ast_fprint_constructor_value(state, node->new.values[i], i == fieldsLen - 1);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_TRY:
+        {
+            laye_ast_fprint_node(state, node->try.target, true);
+        } break;
+
+        case LAYE_AST_NODE_EXPRESSION_CATCH:
+        {
+            laye_ast_fprint_node(state, node->catch.target, false);
+            laye_ast_fprint_node(state, node->catch.body, true);
         } break;
     }
 
