@@ -259,10 +259,7 @@ static laye_token* lexer_get_token(laye_lexer* l)
             }
             else
             {
-                token->kind = LAYE_TOKEN_UNKNOWN;
-                token->location = lexer_location(l, startPosition);
-
-                layec_issue_diagnostic(l->context, SEV_ERROR, token->location, "invalid character '%lc' in Laye source file (did you mean `not` or `!=`?)", c);
+                token->kind = cast(laye_token_kind) '!';
             }
         } break;
 

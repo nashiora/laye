@@ -10,9 +10,10 @@
 #define LAYE_SYNTAX_ALLOCATOR default_allocator
 
 #define LAYE_AST_TYPE_KINDS \
-    T(ERROR) \
+    T(INVALID) \
     T(INFER) \
     T(NAMED) \
+    T(ERROR) \
     T(ARRAY) \
     T(SLICE) \
     T(POINTER) \
@@ -251,6 +252,12 @@ struct laye_ast_node
             laye_ast_varargs_kind varargsKind;
             bool isNilable;
         } functionType;
+
+        struct
+        {
+            laye_ast_node* valueType;
+            laye_ast_node* errorPath;
+        } errorUnionType;
 
         struct
         {

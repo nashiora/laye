@@ -95,6 +95,8 @@
     K(NEW, "new") \
     K(DELETE, "delete") \
     K(CAST, "cast") \
+    K(TRY, "try") \
+    K(CATCH, "catch") \
     K(DISCARD, "discard") \
     K(SIZEOF, "sizeof") \
     K(ALIGNOF, "alignof") \

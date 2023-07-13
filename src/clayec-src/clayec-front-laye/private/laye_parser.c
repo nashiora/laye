@@ -442,7 +442,7 @@ static list(laye_ast_template_argument) laye_parse_template_arguments(laye_parse
 /// @param typeSyntax The input base type syntax, and where to put the result type syntax node.
 /// @param issueDiagnostics True if diagnostics should be issued without rewinding the token stream, false if no diagnostics should be issued and the token stream rewound on error.
 /// @return True if outTypeSyntax has been populated with a type syntax node, false otherwise.
-static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, laye_ast_node** typeSyntax, bool issueDiagnostics)
+static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, laye_ast_node** typeSyntax, bool issueDiagnostics, bool allowFunctions)
 {
     assert(p != nullptr);
     assert( typeSyntax != nullptr);
@@ -487,7 +487,7 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             newType->containerType.access = access;
             newType->containerType.isNilable = isNilable;
             *typeSyntax = newType;
-            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics, allowFunctions);
         } break;
 
         case '[':
@@ -516,7 +516,7 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
                     newType->containerType.access = access;
                     newType->containerType.isNilable = isNilable;
                     *typeSyntax = newType;
-                    return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+                    return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics, allowFunctions);
                 }
                 else
                 {
@@ -561,7 +561,7 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
                     newType->containerType.access = access;
                     newType->containerType.isNilable = isNilable;
                     *typeSyntax = newType;
-                    return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+                    return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics, allowFunctions);
                 }
 
                 if (issueDiagnostics)
@@ -590,11 +590,13 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             newType->containerType.access = access;
             newType->containerType.isNilable = isNilable;
             *typeSyntax = newType;
-            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics, allowFunctions);
         } break;
 
         case '(':
         {
+            if (!allowFunctions)
+                goto default_case;
             if (access != LAYE_AST_ACCESS_NONE && issueDiagnostics)
             {
                 layec_issue_diagnostic(p->context, SEV_ERROR, startLocation, "Access specifier must be followed by '*' or '[' to construct a container type.");
@@ -670,10 +672,11 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
             newType->functionType.varargsKind = varargsKind;
             newType->functionType.isNilable = isNilable;
             *typeSyntax = newType;
-            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics);
+            return laye_parser_try_parse_type_suffix(p, startIndex, typeSyntax, issueDiagnostics, allowFunctions);
         } break;
 
         default:
+            default_case:;
             if (access != LAYE_AST_ACCESS_NONE)
             {
                 if (issueDiagnostics)
@@ -692,12 +695,7 @@ static bool laye_parser_try_parse_type_suffix(laye_parser* p, usize startIndex, 
     return true;
 }
 
-/// @brief Attempts to parse a type.
-/// @param p The parser to use to parse a type.
-/// @param outTypeSyntax Where to put the result type syntax node.
-/// @param issueDiagnostics True if diagnostics should be issued without rewinding the token stream, false if no diagnostics should be issued and the token stream rewound on error.
-/// @return True if outTypeSyntax has been populated with a type syntax node, false otherwise.
-static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSyntax, bool issueDiagnostics)
+static bool laye_parser_try_parse_type_impl(laye_parser* p, laye_ast_node** outTypeSyntax, bool issueDiagnostics, bool allowFunctions)
 {
     assert(p != nullptr);
     assert(outTypeSyntax != nullptr);
@@ -705,6 +703,11 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
     *outTypeSyntax = nullptr;
 
     usize startIndex = p->currentTokenIndex;
+
+    laye_token* current = laye_parser_current(p);
+    assert(current != nullptr);
+
+    layec_location startLocation = current->location;
 
     if (laye_parser_is_eof(p))
     {
@@ -720,6 +723,28 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         return false;
     }
 
+    if (laye_parser_check(p, '!'))
+    {
+        laye_parser_advance(p);
+
+        laye_ast_node* rhsType = nullptr;
+        bool rhsSuccess = laye_parser_try_parse_type_impl(p, &rhsType, issueDiagnostics, false);
+        if (!rhsSuccess)
+        {
+            assert(!issueDiagnostics);
+            p->currentTokenIndex = startIndex;
+            return false;
+        }
+
+        layec_location location = layec_location_combine(startLocation, rhsType->location);
+        laye_ast_node* errorType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ERROR, location);
+        errorType->errorUnionType.valueType = rhsType;
+        errorType->errorUnionType.errorPath = nullptr;
+
+        *outTypeSyntax = errorType;
+        return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics, true);
+    }
+
     laye_ast_type_access access = LAYE_AST_ACCESS_NONE;
     if (laye_parser_check(p, LAYE_TOKEN_READONLY))
     {
@@ -732,10 +757,8 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
         access = LAYE_AST_ACCESS_WRITEONLY;
     }
 
-    laye_token* current = laye_parser_current(p);
+    current = laye_parser_current(p);
     assert(current != nullptr);
-
-    layec_location startLocation = current->location;
 
     #define WORD_TYPE(TK, TY, SX) \
         case LAYE_TOKEN_ ## TK: \
@@ -752,7 +775,7 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
                 type->primitiveType.isNilable = true; \
             } \
             *outTypeSyntax = type; \
-            return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics); \
+            return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics, allowFunctions); \
         }
 
     list(string) path = nullptr;
@@ -804,8 +827,31 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             type->lookupType.templateArguments = templateArguments;
             type->lookupType.isHeadless = isPathHeadless;
             type->lookupType.isNilable = isNilable;
+            
+            if (laye_parser_check(p, '!'))
+            {
+                laye_parser_advance(p);
+
+                laye_ast_node* rhsType = nullptr;
+                bool rhsSuccess = laye_parser_try_parse_type_impl(p, &rhsType, issueDiagnostics, false);
+                if (!rhsSuccess)
+                {
+                    assert(!issueDiagnostics);
+                    p->currentTokenIndex = startIndex;
+                    return false;
+                }
+
+                layec_location location = layec_location_combine(startLocation, rhsType->location);
+                laye_ast_node* errorType = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ERROR, location);
+                errorType->errorUnionType.valueType = rhsType;
+                errorType->errorUnionType.errorPath = type;
+
+                *outTypeSyntax = errorType;
+                return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics, true);
+            }
+
             *outTypeSyntax = type;
-            return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics);
+            return laye_parser_try_parse_type_suffix(p, startIndex, outTypeSyntax, issueDiagnostics, allowFunctions);
         }
 
         WORD_TYPE(VAR, INFER, false)
@@ -855,6 +901,16 @@ static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSy
             return false;
         }
     }
+}
+
+/// @brief Attempts to parse a type.
+/// @param p The parser to use to parse a type.
+/// @param outTypeSyntax Where to put the result type syntax node.
+/// @param issueDiagnostics True if diagnostics should be issued without rewinding the token stream, false if no diagnostics should be issued and the token stream rewound on error.
+/// @return True if outTypeSyntax has been populated with a type syntax node, false otherwise.
+static bool laye_parser_try_parse_type(laye_parser* p, laye_ast_node** outTypeSyntax, bool issueDiagnostics)
+{
+    return laye_parser_try_parse_type_impl(p, outTypeSyntax, issueDiagnostics, true);
 }
 
 static laye_ast_node* laye_parse_primary_suffix(laye_parser* p, laye_ast_node* expression)
@@ -1698,7 +1754,7 @@ static laye_ast_node* laye_parse_declaration_continue(laye_parser* p, list(laye_
                 paramNameToken = laye_parser_current(p);
                 laye_parser_advance(p);
 
-                paramTypeSyntax = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_ERROR, paramNameToken->location);
+                paramTypeSyntax = laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INVALID, paramNameToken->location);
 
                 layec_issue_diagnostic(p->context, SEV_ERROR, paramNameToken->location, "Parameter type missing.");
             }

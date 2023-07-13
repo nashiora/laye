@@ -37,9 +37,25 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
     {
         default: string_builder_append_cstring(sb, "<unknown ast type>"); break;
 
+        case LAYE_AST_NODE_TYPE_ERROR:
+        {
+            if (typeNode->errorUnionType.errorPath != nullptr)
+            {
+                assert(typeNode->errorUnionType.errorPath->kind == LAYE_AST_NODE_TYPE_NAMED);
+                type_to_string_builder(typeNode->errorUnionType.errorPath, sb);
+            }
+
+            string_builder_append_rune(sb, cast(rune) '!');
+            assert(typeNode->errorUnionType.valueType != nullptr);
+            type_to_string_builder(typeNode->errorUnionType.valueType, sb);
+        } break;
+
         case LAYE_AST_NODE_TYPE_FUNCTION:
         {
+            bool isErrorReturn = typeNode->functionType.returnType->kind == LAYE_AST_NODE_TYPE_ERROR;
+            if (isErrorReturn) string_builder_append_rune(sb, cast(rune) '(');
             type_to_string_builder(typeNode->functionType.returnType, sb);
+            if (isErrorReturn) string_builder_append_rune(sb, cast(rune) ')');
             string_builder_append_rune(sb, cast(rune) '(');
             bool isLayeVarargs = typeNode->functionType.varargsKind == LAYE_AST_VARARGS_LAYE;
             for (usize i = 0, iLen = arrlenu(typeNode->functionType.parameterTypes); i < iLen; i++)
