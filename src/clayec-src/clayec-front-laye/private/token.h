@@ -26,7 +26,7 @@
     T(PERCENT_EQUAL, "%=") \
     T(LESS_EQUAL, "<=") \
     T(GREATER_EQUAL, ">=") \
-    T(LES_LESS_EQUAL, "<<=") \
+    T(LESS_LESS_EQUAL, "<<=") \
     T(GREATER_GREATER_EQUAL, ">>=") \
     T(EQUAL_GREATER, "=>") \
     T(COLON_COLON, "::") \

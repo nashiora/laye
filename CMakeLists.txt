@@ -41,6 +41,7 @@ add_executable(clayec
   "src/clayec-src/clayec-front-laye/private/laye_ast.c"
   "src/clayec-src/clayec-front-laye/private/laye_front.c"
   "src/clayec-src/clayec-front-laye/private/laye_lexer.c"
+  "src/clayec-src/clayec-front-laye/private/laye_lyir.c"
   "src/clayec-src/clayec-front-laye/private/laye_parser.c"
 )
 

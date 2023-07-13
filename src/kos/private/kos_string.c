@@ -32,6 +32,9 @@ void kos_string_deallocate(kos_string s)
 
 const char* kos_string_to_cstring(kos_string s, kos_allocator_function allocator)
 {
+    if (s.isNulTerminated)
+        return cast(const char*) s.memory;
+
     if (allocator == nullptr)
         allocator = s.allocator;
     if (allocator == nullptr)

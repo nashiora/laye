@@ -191,6 +191,7 @@ string layec_intern_string_view(layec_context* context, string_view view)
         .allocator = nullptr,
         .count = view.count,
         .memory = newMemory,
+        .isNulTerminated = true,
     };
 
     arrpush(context->internedStrings, newIntern);
@@ -228,6 +229,7 @@ string layec_intern_location_text(layec_context* context, layec_location locatio
         .allocator = nullptr,
         .count = location.length,
         .memory = newMemory,
+        .isNulTerminated = true,
     };
 
     arrpush(context->internedStrings, newIntern);

@@ -5,7 +5,7 @@
 #include "kos/primitives.h"
 
 #define KOS_STRING_EMPTY ((kos_string){ 0 })
-#define KOS_STRING_LITERAL(L) ((kos_string){ nullptr, cast(const uchar*) (L), (usize)((sizeof L) - 1) })
+#define KOS_STRING_LITERAL(L) ((kos_string){ nullptr, cast(const uchar*) (L), (usize)((sizeof L) - 1), .isNulTerminated = true })
 #define KOS_STRING_FORMAT "%.*s"
 #define KOS_STRING_EXPAND(S) (cast(int) (S).count), (cast(const char*) (S).memory)
 #define KOS_STRING_VIEW_EMPTY ((kos_string_view){ 0 })
@@ -63,6 +63,8 @@ typedef struct kos_string
     const uchar* memory;
     // the total number of bytes in the allocated memory block.
     usize count;
+    // true if there is a 0 terminating this string, even if it's not part of `count`.
+    bool isNulTerminated;
 } kos_string;
 
 typedef struct kos_string_view

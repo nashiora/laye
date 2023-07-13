@@ -4,6 +4,5 @@ foreign callconv(::laye) export i32 printf(readonly c_string format, varargs);
 
 void main(readonly string[] argv)
 {
-    global::test a = global::b;
     printf("Hello, hunter!\n");
 }
