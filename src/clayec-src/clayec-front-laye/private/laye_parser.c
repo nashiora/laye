@@ -781,8 +781,24 @@ static bool laye_parser_try_parse_type_impl(laye_parser* p, laye_ast_node** outT
     list(string) path = nullptr;
     string identifierName = { 0 };
     bool isPathHeadless = false;
+    bool isPathGlobal = false;
     switch (current->kind)
     {
+        case LAYE_TOKEN_GLOBAL:
+            isPathGlobal = true;
+            laye_parser_advance(p);
+            if (!laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
+            {
+                if (issueDiagnostics)
+                {
+                    layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Expected '::'.");
+                    return laye_ast_node_alloc(p, LAYE_AST_NODE_TYPE_INVALID, current->location);
+                }
+
+                p->currentTokenIndex = startIndex;
+                return false;
+            }
+            goto start_path_resolution_parse;
         case LAYE_TOKEN_COLON_COLON:
             isPathHeadless = true;
             goto start_path_resolution_parse;
@@ -826,6 +842,7 @@ static bool laye_parser_try_parse_type_impl(laye_parser* p, laye_ast_node** outT
             type->lookupType.path = path;
             type->lookupType.templateArguments = templateArguments;
             type->lookupType.isHeadless = isPathHeadless;
+            type->lookupType.isGlobal = isPathGlobal;
             type->lookupType.isNilable = isNilable;
             
             if (laye_parser_check(p, '!'))
@@ -1202,8 +1219,18 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
     list(string) path = nullptr;
     string identifierName = { 0 };
     bool isPathHeadless = false;
+    bool isPathGlobal = false;
     switch (current->kind)
     {
+        case LAYE_TOKEN_GLOBAL:
+            isPathGlobal = true;
+            laye_parser_advance(p);
+            if (!laye_parser_check(p, LAYE_TOKEN_COLON_COLON))
+            {
+                layec_issue_diagnostic(p->context, SEV_ERROR, current->location, "Expected '::'.");
+                return laye_ast_node_alloc(p, LAYE_AST_NODE_INVALID, current->location);
+            }
+            goto start_path_resolution_parse;
         case LAYE_TOKEN_COLON_COLON:
             isPathHeadless = true;
             goto start_path_resolution_parse;
@@ -1240,6 +1267,7 @@ static laye_ast_node* laye_parse_primary(laye_parser* p)
             resultNode->lookup.path = path;
             resultNode->lookup.templateArguments = templateArguments;
             resultNode->lookup.isHeadless = isPathHeadless;
+            resultNode->lookup.isGlobal = isPathGlobal;
             return laye_parse_identifier_suffix(p, resultNode);
         }
 

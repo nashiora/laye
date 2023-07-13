@@ -38,6 +38,7 @@
     K(TRUE, "true") \
     K(FALSE, "false") \
     K(NIL, "nil") \
+    K(GLOBAL, "global") \
     K(IF, "if") \
     K(THEN, "then") \
     K(ELSE, "else") \

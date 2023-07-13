@@ -139,6 +139,8 @@ static void type_to_string_builder(laye_ast_node* typeNode, string_builder* sb)
         {
             if (typeNode->lookupType.isHeadless)
                 string_builder_append_cstring(sb, "::");
+            else if (typeNode->lookupType.isGlobal)
+                string_builder_append_cstring(sb, "global::");
             for (usize i = 0, iLen = arrlenu(typeNode->lookupType.path); i < iLen; i++)
             {
                 if (i > 0)
@@ -592,13 +594,15 @@ static void laye_ast_fprint_node(ast_fprint_state state, laye_ast_node* node, bo
             PUTCOLOR(ANSI_COLOR_BLUE);
             fprintf(state.stream, "Path: ");
             RESETCOLOR;
-            if (node->lookupType.isHeadless)
+            if (node->lookup.isHeadless)
                 fprintf(state.stream, "::");
-            for (usize i = 0, iLen = arrlenu(node->lookupType.path); i < iLen; i++)
+            else if (node->lookup.isGlobal)
+                fprintf(state.stream, "global::");
+            for (usize i = 0, iLen = arrlenu(node->lookup.path); i < iLen; i++)
             {
                 if (i > 0)
                     fprintf(state.stream, "::");
-                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->lookupType.path[i]));
+                fprintf(state.stream, STRING_FORMAT, STRING_EXPAND(node->lookup.path[i]));
             }
             PUTCOLOR(ANSI_COLOR_BRIGHT_BLACK);
             fprintf(state.stream, ">");

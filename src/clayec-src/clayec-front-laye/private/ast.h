@@ -246,6 +246,7 @@ struct laye_ast_node
             list(string) path;
             list(laye_ast_template_argument) templateArguments;
             bool isHeadless;
+            bool isGlobal;
             bool isNilable;
         } lookupType;
 
@@ -338,6 +339,7 @@ struct laye_ast_node
             list(string) path;
             list(laye_ast_template_argument) templateArguments;
             bool isHeadless;
+            bool isGlobal;
         } lookup;
 
         union
