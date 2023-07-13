@@ -37,11 +37,11 @@ add_executable(clayec
 
   "src/clayec-src/clayec-lib/private/compiler.c"
   "src/clayec-src/clayec-lib/private/diagnostic.c"
+  "src/clayec-src/clayec-lib/private/lyir.c"
 
   "src/clayec-src/clayec-front-laye/private/laye_ast.c"
   "src/clayec-src/clayec-front-laye/private/laye_front.c"
   "src/clayec-src/clayec-front-laye/private/laye_lexer.c"
-  "src/clayec-src/clayec-front-laye/private/laye_lyir.c"
   "src/clayec-src/clayec-front-laye/private/laye_parser.c"
 )
 
